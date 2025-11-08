@@ -1,0 +1,68 @@
+{
+  "rules": {
+    ".read": false,
+    ".write": false,
+    
+    "rideLocations": {
+      "$rideID": {
+        ".read": "auth != null",
+        ".write": "auth != null && (
+          root.child('rides').child($rideID).child('driverID').val() == auth.uid
+        )",
+        ".validate": "newData.hasChildren(['lat', 'lng', 'timestamp'])",
+        "lat": {
+          ".validate": "newData.isNumber() && newData.val() >= -90 && newData.val() <= 90"
+        },
+        "lng": {
+          ".validate": "newData.isNumber() && newData.val() >= -180 && newData.val() <= 180"
+        },
+        "heading": {
+          ".validate": "newData.isNumber() && newData.val() >= 0 && newData.val() <= 360"
+        },
+        "speed": {
+          ".validate": "newData.isNumber() && newData.val() >= 0"
+        },
+        "timestamp": {
+          ".validate": "newData.isNumber()"
+        }
+      }
+    },
+    
+    "chats": {
+      "$rideID": {
+        ".read": "auth != null",
+        "$messageID": {
+          ".write": "auth != null",
+          ".validate": "newData.hasChildren(['senderID', 'text', 'timestamp']) && 
+                       newData.child('text').isString() && 
+                       newData.child('text').val().length > 0 && 
+                       newData.child('text').val().length <= 1000",
+          "senderID": {
+            ".validate": "newData.val() == auth.uid || newData.val() == 'system'"
+          },
+          "senderName": {
+            ".validate": "newData.isString()"
+          },
+          "senderRole": {
+            ".validate": "newData.val() == 'driver' || newData.val() == 'rider' || newData.val() == 'system'"
+          },
+          "text": {
+            ".validate": "newData.isString() && newData.val().length <= 1000"
+          },
+          "messageType": {
+            ".validate": "newData.val() == 'text' || newData.val() == 'location' || newData.val() == 'system'"
+          },
+          "timestamp": {
+            ".validate": "newData.isNumber()"
+          },
+          "read": {
+            ".validate": "newData.isBoolean()"
+          },
+          "$other": {
+            ".validate": false
+          }
+        }
+      }
+    }
+  }
+}

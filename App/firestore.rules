@@ -1,0 +1,134 @@
+rules_version = '2';
+service cloud.firestore {
+  match /databases/{database}/documents {
+    
+    // Helper Functions
+    function isAuthenticated() {
+      return request.auth != null;
+    }
+    
+    function isOwner(uid) {
+      return isAuthenticated() && request.auth.uid == uid;
+    }
+    
+    function getUserData() {
+      return get(/databases/$(database)/documents/users/$(request.auth.uid)).data;
+    }
+    
+    // ========================================================================
+    // USERS COLLECTION
+    // ========================================================================
+    match /users/{uid} {
+      // Anyone authenticated can read user profiles (for ride info)
+      allow read: if isAuthenticated();
+      
+      // Users can create their own profile during signup
+      allow create: if isAuthenticated() 
+                    && request.auth.uid == uid
+                    && request.resource.data.uid == uid
+                    && request.resource.data.email == request.auth.token.email;
+      
+      // Users can only update their own profile
+      allow update: if isOwner(uid)
+                    // Prevent changing critical fields
+                    && request.resource.data.uid == resource.data.uid
+                    && request.resource.data.createdAt == resource.data.createdAt;
+      
+      // Users cannot delete their profile (use Cloud Function for proper cleanup)
+      allow delete: if false;
+    }
+    
+    // ========================================================================
+    // RIDES COLLECTION
+    // ========================================================================
+    match /rides/{rideID} {
+      // Anyone authenticated can read rides (to search and view)
+      allow read: if isAuthenticated();
+      
+      // Only drivers can create rides
+      allow create: if isAuthenticated()
+                    && getUserData().role == 'driver'
+                    && request.resource.data.driverID == request.auth.uid
+                    && request.resource.data.seatsAvailable == request.resource.data.totalSeats
+                    && request.resource.data.totalSeats > 0
+                    && request.resource.data.totalSeats <= 8
+                    && request.resource.data.cost >= 0
+                    && request.resource.data.status == 'active';
+      
+      // Only the driver can update their ride
+      allow update: if isAuthenticated()
+                    && resource.data.driverID == request.auth.uid
+                    // Prevent changing critical fields
+                    && request.resource.data.driverID == resource.data.driverID
+                    && request.resource.data.rideID == resource.data.rideID
+                    && request.resource.data.createdAt == resource.data.createdAt;
+      
+      // Only the driver can delete their ride (before it starts)
+      allow delete: if isAuthenticated()
+                    && resource.data.driverID == request.auth.uid
+                    && resource.data.status != 'completed';
+    }
+    
+    // ========================================================================
+    // BOOKINGS COLLECTION
+    // ========================================================================
+    match /bookings/{bookingID} {
+      // Users can read their own bookings or bookings for rides they're driving
+      allow read: if isAuthenticated() 
+                  && (resource.data.riderID == request.auth.uid 
+                      || resource.data.driverID == request.auth.uid);
+      
+      // Users can create bookings as riders
+      allow create: if isAuthenticated()
+                    && request.resource.data.riderID == request.auth.uid
+                    && request.resource.data.seatsBooked > 0
+                    && request.resource.data.seatsBooked <= 4
+                    && request.resource.data.status == 'active';
+      
+      // Only the rider can update their own booking (to cancel)
+      allow update: if isAuthenticated()
+                    && resource.data.riderID == request.auth.uid
+                    // Only allow status changes to cancelled
+                    && request.resource.data.status in ['active', 'cancelled', 'completed']
+                    && request.resource.data.riderID == resource.data.riderID
+                    && request.resource.data.rideID == resource.data.rideID
+                    && request.resource.data.createdAt == resource.data.createdAt;
+      
+      // Bookings cannot be deleted (use status = cancelled instead)
+      allow delete: if false;
+    }
+    
+    // ========================================================================
+    // RATINGS COLLECTION
+    // ========================================================================
+    match /ratings/{ratingID} {
+      // Users can read ratings for any user (to see reviews)
+      allow read: if isAuthenticated();
+      
+      // Users can create ratings after completing a ride
+      allow create: if isAuthenticated()
+                    && request.resource.data.fromUserID == request.auth.uid
+                    && request.resource.data.rating >= 1
+                    && request.resource.data.rating <= 5
+                    // Prevent rating yourself
+                    && request.resource.data.fromUserID != request.resource.data.toUserID;
+      
+      // Ratings cannot be updated or deleted (permanent record)
+      allow update: if false;
+      allow delete: if false;
+    }
+    
+    // ========================================================================
+    // ARCHIVED RIDES (Read-only for users)
+    // ========================================================================
+    match /archived_rides/{rideID} {
+      // Users can read their archived rides
+      allow read: if isAuthenticated() 
+                  && (resource.data.driverID == request.auth.uid 
+                      || request.auth.uid in resource.data.riders);
+      
+      // Only Cloud Functions can write to archived rides
+      allow write: if false;
+    }
+  }
+}
