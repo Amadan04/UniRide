@@ -1,0 +1,36 @@
+{
+  "name": "swen360",
+  "version": "1.0.0",
+  "description": "University Carpooling & Ride Sharing App backend — secure Firebase-powered platform for students to share rides within the university community.",
+  "type": "module",
+  "main": "index.js",
+  "directories": {
+    "doc": "docs",
+    "test": "tests"
+  },
+  "scripts": {
+    "start": "node App/testconnection.js",
+    "test": "echo \"No formal tests yet — use 'npm start' to run the Firebase connection test.\""
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/Amadan04/SWEN360.git"
+  },
+  "keywords": [
+    "firebase",
+    "carpooling",
+    "ride-sharing",
+    "university",
+    "backend"
+  ],
+  "author": "Smo Sheikh Abdullah 👑",
+  "license": "ISC",
+  "bugs": {
+    "url": "https://github.com/Amadan04/SWEN360/issues"
+  },
+  "homepage": "https://github.com/Amadan04/SWEN360#readme",
+  "dependencies": {
+    "dotenv": "^17.2.3",
+    "firebase": "^12.5.0"
+  }
+}
