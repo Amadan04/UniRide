@@ -21,7 +21,7 @@ import {
   arrayRemove,
   runTransaction
 } from 'firebase/firestore';
-import { db, COLLECTIONS } from './firebase';
+import { db, COLLECTIONS } from '../firebase';
 
 /**
  * Generate a unique booking ID

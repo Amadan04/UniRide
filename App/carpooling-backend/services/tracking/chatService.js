@@ -7,7 +7,7 @@
 
 import { ref, push, get, query, orderByChild, limitToLast, onChildAdded, off } from 'firebase/database';
 import { doc, getDoc } from 'firebase/firestore';
-import { realtimeDb, db, REALTIME_PATHS, COLLECTIONS } from './firebase';
+import { realtimeDb, db, REALTIME_PATHS, COLLECTIONS } from '../firebase';
 
 /**
  * Send a message in a ride chat

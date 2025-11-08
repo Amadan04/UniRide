@@ -7,7 +7,7 @@
 
 import { ref, set, get, onValue, off, serverTimestamp } from 'firebase/database';
 import { doc, getDoc } from 'firebase/firestore';
-import { realtimeDb, db, REALTIME_PATHS, COLLECTIONS } from './firebase';
+import { realtimeDb, db, REALTIME_PATHS, COLLECTIONS } from '../firebase';
 
 /**
  * Start tracking location for a ride (driver calls this)

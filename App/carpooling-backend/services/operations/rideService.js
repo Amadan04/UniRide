@@ -21,7 +21,7 @@ import {
   increment,
   arrayUnion
 } from 'firebase/firestore';
-import { db, COLLECTIONS } from './firebase';
+import { db, COLLECTIONS } from '../firebase';
 
 /**
  * Generate a unique ride ID

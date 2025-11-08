@@ -18,7 +18,7 @@ import {
   serverTimestamp,
   runTransaction
 } from 'firebase/firestore';
-import { db, COLLECTIONS } from './firebase';
+import { db, COLLECTIONS } from '../firebase';
 
 /**
  * Generate a unique rating ID

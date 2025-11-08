@@ -6,7 +6,7 @@
  */
 
 import { doc, getDoc } from 'firebase/firestore';
-import { db, COLLECTIONS } from './firebase';
+import { db, COLLECTIONS } from '../firebase';
 
 /**
  * Notification types
