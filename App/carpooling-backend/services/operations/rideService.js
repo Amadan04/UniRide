@@ -45,6 +45,7 @@ const generateRideId = () => {
  * @param {string} rideData.time - Ride time (HH:mm)
  * @param {number} rideData.totalSeats - Total available seats
  * @param {number} rideData.cost - Cost per seat
+ * @param {string} rideData.genderPreference - Optional: 'male', 'female', 'any' (default: 'any')
  * @returns {Promise<Object>} Created ride object
  */
 export const createRide = async (rideData) => {
@@ -62,7 +63,8 @@ export const createRide = async (rideData) => {
       totalSeats,
       cost,
       notes = '',
-      vehicleInfo = {}
+      vehicleInfo = {},
+      genderPreference = 'any'
     } = rideData;
 
     // Validate required fields
@@ -87,6 +89,12 @@ export const createRide = async (rideData) => {
       throw new Error('Cost cannot be negative');
     }
 
+    // Validate genderPreference
+    const validGenderPreferences = ['male', 'female', 'any'];
+    if (!validGenderPreferences.includes(genderPreference)) {
+      throw new Error('Gender preference must be: male, female, or any');
+    }
+
     // Verify driver exists and has driver role
     const driverDoc = await getDoc(doc(db, COLLECTIONS.USERS, driverID));
     if (!driverDoc.exists()) {
@@ -94,8 +102,10 @@ export const createRide = async (rideData) => {
     }
 
     const driverData = driverDoc.data();
+    
+    // CRITICAL: Only users with role "driver" can create rides
     if (driverData.role !== 'driver') {
-      throw new Error('User must have driver role to create rides');
+      throw new Error('Only users with driver role can create rides');
     }
 
     // Parse date and time to create timestamp
@@ -117,6 +127,7 @@ export const createRide = async (rideData) => {
       driverID,
       driverName: driverData.name,
       driverPhone: driverData.phone,
+      driverGender: driverData.gender || 'other',
       driverRating: driverData.avgRating,
       driverProfilePic: driverData.profilePic || '',
       pickup,
@@ -134,6 +145,7 @@ export const createRide = async (rideData) => {
       riders: [], // Array of rider IDs who booked
       status: 'active', // active, full, completed, cancelled
       notes,
+      genderPreference, // 'male', 'female', 'any'
       vehicleInfo: {
         make: vehicleInfo.make || '',
         model: vehicleInfo.model || '',
@@ -163,13 +175,218 @@ export const createRide = async (rideData) => {
 };
 
 /**
+ * Update ride details
+ * @param {string} driverID - Driver's user ID (for authorization)
+ * @param {string} rideID - Ride ID
+ * @param {Object} updates - Fields to update
+ * @param {string} updates.date - Ride date (YYYY-MM-DD)
+ * @param {string} updates.time - Ride time (HH:mm)
+ * @param {number} updates.totalSeats - Total available seats
+ * @param {number} updates.cost - Cost per seat
+ * @param {string} updates.notes - Additional notes
+ * @param {string} updates.genderPreference - Gender preference
+ * @param {Object} updates.vehicleInfo - Vehicle information
+ * @returns {Promise<Object>} Result
+ */
+export const updateRideDetails = async (driverID, rideID, updates) => {
+  try {
+    // Validate inputs
+    if (!driverID || !rideID) {
+      throw new Error('Driver ID and Ride ID are required');
+    }
+
+    if (!updates || Object.keys(updates).length === 0) {
+      throw new Error('No updates provided');
+    }
+
+    // Get ride document
+    const rideDoc = await getDoc(doc(db, COLLECTIONS.RIDES, rideID));
+
+    if (!rideDoc.exists()) {
+      throw new Error('Ride not found');
+    }
+
+    const rideData = rideDoc.data();
+
+    // Verify the user is the driver
+    if (rideData.driverID !== driverID) {
+      throw new Error('Only the driver can update ride details');
+    }
+
+    // Cannot update completed or cancelled rides
+    if (rideData.status === 'completed') {
+      throw new Error('Cannot update a completed ride');
+    }
+
+    if (rideData.status === 'cancelled') {
+      throw new Error('Cannot update a cancelled ride');
+    }
+
+    // Build update object
+    const updateData = {
+      updatedAt: serverTimestamp()
+    };
+
+    // Validate and add date/time updates
+    if (updates.date || updates.time) {
+      const newDate = updates.date || rideData.date;
+      const newTime = updates.time || rideData.time;
+
+      const [year, month, day] = newDate.split('-').map(Number);
+      const [hours, minutes] = newTime.split(':').map(Number);
+      const newRideDateTime = new Date(year, month - 1, day, hours, minutes);
+
+      // Check if new ride date is in the future
+      if (newRideDateTime <= new Date()) {
+        throw new Error('Ride date and time must be in the future');
+      }
+
+      if (updates.date) updateData.date = updates.date;
+      if (updates.time) updateData.time = updates.time;
+      updateData.rideDateTime = Timestamp.fromDate(newRideDateTime);
+    }
+
+    // Validate and add totalSeats update
+    if (updates.totalSeats !== undefined) {
+      if (updates.totalSeats < 1 || updates.totalSeats > 8) {
+        throw new Error('Total seats must be between 1 and 8');
+      }
+
+      // Cannot reduce seats below already booked
+      const seatsBooked = rideData.totalSeats - rideData.seatsAvailable;
+      if (updates.totalSeats < seatsBooked) {
+        throw new Error(`Cannot reduce seats below ${seatsBooked} (already booked)`);
+      }
+
+      updateData.totalSeats = updates.totalSeats;
+      updateData.seatsAvailable = updates.totalSeats - seatsBooked;
+
+      // Update status if necessary
+      if (updateData.seatsAvailable === 0) {
+        updateData.status = 'full';
+      } else if (rideData.status === 'full' && updateData.seatsAvailable > 0) {
+        updateData.status = 'active';
+      }
+    }
+
+    // Validate and add cost update
+    if (updates.cost !== undefined) {
+      if (updates.cost < 0) {
+        throw new Error('Cost cannot be negative');
+      }
+      updateData.cost = updates.cost;
+    }
+
+    // Validate and add genderPreference update
+    if (updates.genderPreference !== undefined) {
+      const validGenderPreferences = ['male', 'female', 'any'];
+      if (!validGenderPreferences.includes(updates.genderPreference)) {
+        throw new Error('Gender preference must be: male, female, or any');
+      }
+      updateData.genderPreference = updates.genderPreference;
+    }
+
+    // Add notes update
+    if (updates.notes !== undefined) {
+      updateData.notes = updates.notes;
+    }
+
+    // Validate and add vehicleInfo update
+    if (updates.vehicleInfo !== undefined) {
+      updateData.vehicleInfo = {
+        make: updates.vehicleInfo.make || rideData.vehicleInfo.make || '',
+        model: updates.vehicleInfo.model || rideData.vehicleInfo.model || '',
+        color: updates.vehicleInfo.color || rideData.vehicleInfo.color || '',
+        licensePlate: updates.vehicleInfo.licensePlate || rideData.vehicleInfo.licensePlate || ''
+      };
+    }
+
+    // Update ride document
+    await updateDoc(doc(db, COLLECTIONS.RIDES, rideID), updateData);
+
+    return {
+      success: true,
+      message: 'Ride details updated successfully',
+      updatedFields: Object.keys(updateData).filter(key => key !== 'updatedAt')
+    };
+  } catch (error) {
+    console.error('Error updating ride details:', error);
+    throw new Error(error.message || 'Failed to update ride details');
+  }
+};
+
+/**
+ * Get rides created by a specific driver
+ * @param {string} driverID - Driver's user ID
+ * @param {string} status - Optional status filter ('active', 'full', 'completed', 'cancelled')
+ * @param {number} limitResults - Maximum number of results (default: 100)
+ * @returns {Promise<Object>} Driver's rides
+ */
+export const getDriverRides = async (driverID, status = null, limitResults = 100) => {
+  try {
+    if (!driverID) {
+      throw new Error('Driver ID is required');
+    }
+
+    // Build query constraints
+    let constraints = [
+      where('driverID', '==', driverID),
+      orderBy('rideDateTime', 'desc'),
+      limit(limitResults)
+    ];
+
+    // Add status filter if provided
+    if (status) {
+      const validStatuses = ['active', 'full', 'completed', 'cancelled'];
+      if (!validStatuses.includes(status)) {
+        throw new Error('Invalid status. Must be: active, full, completed, or cancelled');
+      }
+      
+      // Need to rebuild constraints with status filter
+      constraints = [
+        where('driverID', '==', driverID),
+        where('status', '==', status),
+        orderBy('rideDateTime', 'desc'),
+        limit(limitResults)
+      ];
+    }
+
+    const driverQuery = query(
+      collection(db, COLLECTIONS.RIDES),
+      ...constraints
+    );
+
+    const querySnapshot = await getDocs(driverQuery);
+    const rides = [];
+
+    querySnapshot.forEach((doc) => {
+      rides.push({
+        ...doc.data(),
+        id: doc.id
+      });
+    });
+
+    return {
+      success: true,
+      rides,
+      count: rides.length
+    };
+  } catch (error) {
+    console.error('Error getting driver rides:', error);
+    throw new Error('Failed to fetch driver rides');
+  }
+};
+
+/**
  * Get available rides with filters
  * @param {Object} filters - Search filters
  * @param {string} filters.pickup - Pickup location (partial match)
  * @param {string} filters.destination - Destination location (partial match)
  * @param {string} filters.date - Ride date (YYYY-MM-DD)
+ * @param {string} filters.time - Ride time (HH:mm) - filters rides at or after this time
  * @param {number} filters.seatsNeeded - Minimum seats needed
  * @param {number} filters.maxCost - Maximum cost per seat
+ * @param {string} filters.genderPreference - Gender preference filter ('male', 'female', 'any')
  * @param {number} filters.limit - Maximum results to return
  * @returns {Promise<Array>} Array of available rides
  */
@@ -179,8 +396,10 @@ export const getAvailableRides = async (filters = {}) => {
       pickup,
       destination,
       date,
+      time,
       seatsNeeded = 1,
       maxCost,
+      genderPreference,
       limitResults = 50
     } = filters;
 
@@ -237,6 +456,23 @@ export const getAvailableRides = async (filters = {}) => {
       rides = rides.filter(ride =>
         ride.destination.toLowerCase().includes(destination.toLowerCase())
       );
+    }
+
+    // Client-side filtering for time (if date is also provided)
+    if (time && date) {
+      rides = rides.filter(ride => {
+        return ride.time >= time;
+      });
+    }
+
+    // Client-side filtering for gender preference
+    if (genderPreference && genderPreference !== 'any') {
+      const validGenderPreferences = ['male', 'female'];
+      if (validGenderPreferences.includes(genderPreference)) {
+        rides = rides.filter(ride => {
+          return ride.genderPreference === 'any' || ride.genderPreference === genderPreference;
+        });
+      }
     }
 
     return {
@@ -548,3 +784,49 @@ const calculateDistance = (lat1, lon1, lat2, lon2) => {
 const toRad = (degrees) => {
   return degrees * (Math.PI / 180);
 };
+
+/**
+ * PLACEHOLDER FOR FUTURE CLOUD FUNCTION
+ * 
+ * Auto-archive completed rides
+ * 
+ * This function should be implemented as a Firebase Cloud Function that runs on a schedule
+ * (e.g., daily at midnight) to automatically move completed rides older than 30 days
+ * from the 'rides' collection to an 'archived_rides' collection.
+ * 
+ * Recommended implementation:
+ * - Use Firebase Cloud Functions with a scheduled trigger (firebase-functions/scheduler)
+ * - Query: rides where status == 'completed' AND completedAt < (now - 30 days)
+ * - Move matching documents to 'archived_rides' collection
+ * - Delete from 'rides' collection
+ * - Also archive associated bookings
+ * 
+ * Example Cloud Function structure:
+ * 
+ * exports.archiveCompletedRides = functions.pubsub
+ *   .schedule('0 0 * * *') // Run daily at midnight
+ *   .timeZone('America/New_York')
+ *   .onRun(async (context) => {
+ *     const thirtyDaysAgo = new Date();
+ *     thirtyDaysAgo.setDate(thirtyDaysAgo.getDate() - 30);
+ *     
+ *     const completedRidesQuery = db.collection('rides')
+ *       .where('status', '==', 'completed')
+ *       .where('completedAt', '<', thirtyDaysAgo);
+ *     
+ *     const snapshot = await completedRidesQuery.get();
+ *     
+ *     const batch = db.batch();
+ *     snapshot.forEach(doc => {
+ *       // Copy to archived collection
+ *       const archivedRef = db.collection('archived_rides').doc(doc.id);
+ *       batch.set(archivedRef, { ...doc.data(), archivedAt: FieldValue.serverTimestamp() });
+ *       
+ *       // Delete from rides collection
+ *       batch.delete(doc.ref);
+ *     });
+ *     
+ *     await batch.commit();
+ *     console.log(`Archived ${snapshot.size} completed rides`);
+ *   });
+ */

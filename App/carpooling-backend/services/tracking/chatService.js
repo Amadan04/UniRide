@@ -5,7 +5,7 @@
  * Allows riders and drivers to communicate about specific rides.
  */
 
-import { ref, push, get, query, orderByChild, limitToLast, onChildAdded, off } from 'firebase/database';
+import { ref, push, get, query, orderByChild, limitToLast, onChildAdded, off, update, set } from 'firebase/database';
 import { doc, getDoc } from 'firebase/firestore';
 import { realtimeDb, db, REALTIME_PATHS, COLLECTIONS } from '../firebase';
 
@@ -59,7 +59,7 @@ export const sendMessage = async (rideID, senderID, text, messageType = 'text') 
       text: text.trim(),
       messageType,
       timestamp: Date.now(),
-      read: false
+      readBy: [senderID]
     };
 
     // Push message to chat
@@ -95,7 +95,7 @@ export const sendSystemMessage = async (rideID, text) => {
       text: text.trim(),
       messageType: 'system',
       timestamp: Date.now(),
-      read: false
+      readBy: []
     };
 
     const chatRef = ref(realtimeDb, `${REALTIME_PATHS.CHATS}/${rideID}`);
@@ -241,8 +241,8 @@ export const getUnreadCount = async (rideID, userID) => {
     if (snapshot.exists()) {
       snapshot.forEach((childSnapshot) => {
         const message = childSnapshot.val();
-        // Count messages not sent by this user and not read
-        if (message.senderID !== userID && !message.read) {
+        // Count messages not sent by this user and not yet read by them
+        if (message.senderID !== userID && (!message.readBy || !message.readBy.includes(userID))) {
           unreadCount++;
         }
       });
@@ -274,15 +274,18 @@ export const markMessagesAsRead = async (rideID, userID) => {
       
       snapshot.forEach((childSnapshot) => {
         const message = childSnapshot.val();
-        // Mark as read if not sent by this user
-        if (message.senderID !== userID && !message.read) {
-          updates[`${childSnapshot.key}/read`] = true;
+        const readBy = message.readBy || [];
+        
+        // Add user to readBy array if not sent by this user and not already read by them
+        if (message.senderID !== userID && !readBy.includes(userID)) {
+          // Add userID to the readBy array
+          const updatedReadBy = [...readBy, userID];
+          updates[`${childSnapshot.key}/readBy`] = updatedReadBy;
         }
       });
 
       if (Object.keys(updates).length > 0) {
-        const chatRef = ref(realtimeDb, `${REALTIME_PATHS.CHATS}/${rideID}`);
-        await set(chatRef, updates);
+        await update(chatRef, updates);
       }
     }
 

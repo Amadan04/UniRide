@@ -105,6 +105,19 @@ export const bookSeat = async (rideID, riderID, seatsBooked = 1) => {
         throw new Error('Cannot book a ride that has already started');
       }
 
+      // Validate gender preference compatibility
+      if (rideData.genderPreference && rideData.genderPreference !== 'any') {
+        const riderGender = riderData.gender || 'other';
+        
+        if (rideData.genderPreference === 'male' && riderGender !== 'male') {
+          throw new Error('This ride is for male passengers only');
+        }
+        
+        if (rideData.genderPreference === 'female' && riderGender !== 'female') {
+          throw new Error('This ride is for female passengers only');
+        }
+      }
+
       // Create booking document
       const bookingRef = doc(db, COLLECTIONS.BOOKINGS, bookingID);
       const bookingData = {
@@ -113,8 +126,10 @@ export const bookSeat = async (rideID, riderID, seatsBooked = 1) => {
         riderID,
         riderName: riderData.name,
         riderPhone: riderData.phone,
+        riderGender: riderData.gender || 'other',
         riderProfilePic: riderData.profilePic || '',
         driverID: rideData.driverID,
+        driverName: rideData.driverName,
         pickup: rideData.pickup,
         destination: rideData.destination,
         date: rideData.date,
@@ -122,6 +137,7 @@ export const bookSeat = async (rideID, riderID, seatsBooked = 1) => {
         seatsBooked,
         costPerSeat: rideData.cost,
         totalCost: rideData.cost * seatsBooked,
+        genderPreference: rideData.genderPreference || 'any',
         status: 'active', // active, cancelled, completed
         createdAt: serverTimestamp(),
         updatedAt: serverTimestamp()
