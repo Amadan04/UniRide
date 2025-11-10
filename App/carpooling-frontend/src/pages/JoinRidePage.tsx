@@ -1,24 +1,26 @@
 import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { motion } from 'framer-motion';
-import { collection, query, where, getDocs, doc, updateDoc, arrayUnion } from 'firebase/firestore';
+import { collection, query, where, getDocs, doc, updateDoc, arrayUnion, addDoc } from 'firebase/firestore';
 import { db } from '../firebase';
 import { useAuth } from '../context/AuthContext';
 import { MapPin, Calendar, Clock, Users, DollarSign, Star, ArrowLeft, Filter } from 'lucide-react';
-import { pageTransition, staggerContainer, scaleIn } from '../animations/motionVariants';
+import { pageTransition, scaleIn } from '../animations/motionVariants';
 
 interface Ride {
-  id: string;
-  driverId: string;
+  id?: string; // Firestore document ID
+  driverID: string;
   driverName: string;
   driverRating: number;
   pickup: string;
   destination: string;
   date: string;
   time: string;
-  availableSeats: number;
+  seatsAvailable: number;
+  totalSeats?: number;
   cost: number;
   status: string;
+  passengers?: { uid: string; name: string; joinedAt: string }[];
 }
 
 export const JoinRidePage: React.FC = () => {
@@ -35,8 +37,14 @@ export const JoinRidePage: React.FC = () => {
   });
 
   useEffect(() => {
-    fetchRides();
-  }, []);
+    console.log('userData:', userData);
+    if (userData?.uid) {
+      console.log('Fetching rides for user:', userData.uid);
+      fetchRides();
+    } else {
+      console.log('userData or uid not available yet');
+    }
+  }, [userData?.uid]);
 
   useEffect(() => {
     applyFilters();
@@ -44,18 +52,28 @@ export const JoinRidePage: React.FC = () => {
 
   const fetchRides = async () => {
     try {
+      console.log('Starting to fetch rides...');
       const ridesRef = collection(db, 'rides');
-      const q = query(ridesRef, where('status', '==', 'active'), where('availableSeats', '>', 0));
+      const q = query(
+        ridesRef,
+        where('status', '==', 'active'),
+        where('seatsAvailable', '>', 0)
+      );
       const querySnapshot = await getDocs(q);
+      console.log('Query snapshot size:', querySnapshot.size);
 
       const ridesData: Ride[] = [];
-      querySnapshot.forEach((doc) => {
-        const data = doc.data();
-        if (data.driverId !== userData?.uid) {
-          ridesData.push({ id: doc.id, ...data } as Ride);
+      querySnapshot.forEach((docSnapshot) => {
+        const data = docSnapshot.data();
+        console.log('Found ride:', { id: docSnapshot.id, driverID: data.driverID, currentUser: userData?.uid });
+        if (data.driverID !== userData?.uid) {
+          ridesData.push({ id: docSnapshot.id, ...data } as Ride);
+        } else {
+          console.log('Filtered out ride because user is the driver');
         }
       });
 
+      console.log('Total rides after filtering:', ridesData.length);
       setRides(ridesData);
       setLoading(false);
     } catch (error) {
@@ -65,43 +83,97 @@ export const JoinRidePage: React.FC = () => {
   };
 
   const applyFilters = () => {
+    console.log('Applying filters to rides:', rides.length);
     let filtered = [...rides];
 
     if (filters.destination) {
       filtered = filtered.filter((ride) =>
         ride.destination.toLowerCase().includes(filters.destination.toLowerCase())
       );
+      console.log('After destination filter:', filtered.length);
     }
 
     if (filters.date) {
       filtered = filtered.filter((ride) => ride.date === filters.date);
+      console.log('After date filter:', filtered.length);
     }
 
     if (filters.maxCost) {
       filtered = filtered.filter((ride) => ride.cost <= parseFloat(filters.maxCost));
+      console.log('After cost filter:', filtered.length);
     }
 
+    console.log('Final filtered rides:', filtered.length);
     setFilteredRides(filtered);
   };
 
-  const handleJoinRide = async (rideId: string) => {
-    if (!userData) return;
+  const handleJoinRide = async (ride: Ride) => {
+    if (!userData || !ride.id) return;
 
     try {
-      const rideRef = doc(db, 'rides', rideId);
+      console.log('=== JOIN RIDE DEBUG ===');
+      console.log('Current ride data:', ride);
+      console.log('User data:', userData);
+
+      // Prevent duplicate joining
+      if (ride.passengers?.some(p => p.uid === userData.uid)) {
+        alert('You have already joined this ride!');
+        return;
+      }
+
+      // Check if seats are still available
+      if (ride.seatsAvailable <= 0) {
+        alert('Sorry, this ride is now full!');
+        return;
+      }
+
+      const rideRef = doc(db, 'rides', ride.id);
+
+      // Get the current ride data to ensure we have the latest passengers array
+      const currentPassengers = ride.passengers || [];
+      const newPassenger = {
+        uid: userData.uid,
+        name: userData.name,
+        joinedAt: new Date().toISOString(),
+      };
+
+      console.log('Current passengers:', currentPassengers);
+      console.log('New passenger:', newPassenger);
+      console.log('New passengers array:', [...currentPassengers, newPassenger]);
+      console.log('New seatsAvailable:', ride.seatsAvailable - 1);
+
+      // Update the ride document with explicit array
       await updateDoc(rideRef, {
-        passengers: arrayUnion({
-          uid: userData.uid,
-          name: userData.name,
-          joinedAt: new Date().toISOString(),
-        }),
-        availableSeats: filteredRides.find((r) => r.id === rideId)!.availableSeats - 1,
+        passengers: [...currentPassengers, newPassenger],
+        seatsAvailable: ride.seatsAvailable - 1,
       });
 
+      console.log('✅ Ride update successful!');
+
+      // Optional: Create a booking record
+      await addDoc(collection(db, 'bookings'), {
+        rideId: ride.id,
+        riderID: userData.uid,
+        riderName: userData.name,
+        driverID: ride.driverID,
+        driverName: ride.driverName,
+        pickup: ride.pickup,
+        destination: ride.destination,
+        date: ride.date,
+        time: ride.time,
+        cost: ride.cost,
+        seatsBooked: 1,
+        status: 'active',
+        createdAt: new Date().toISOString(),
+      });
+
+      console.log('✅ Booking created successfully!');
+
       alert('Successfully joined the ride!');
-      navigate(`/chat/${rideId}`);
+      navigate(`/chat/${ride.id}`);
     } catch (error) {
-      console.error('Error joining ride:', error);
+      console.error('❌ Error joining ride:', error);
+      console.error('Error details:', JSON.stringify(error, null, 2));
       alert('Failed to join ride. Please try again.');
     }
   };
@@ -109,7 +181,10 @@ export const JoinRidePage: React.FC = () => {
   return (
     <motion.div
       className="min-h-screen bg-gradient-to-br from-slate-900 to-blue-900 dark:from-slate-950 dark:to-blue-950 py-12 px-4"
-      {...pageTransition}
+      initial={pageTransition.initial}
+      animate={pageTransition.animate}
+      exit={pageTransition.exit}
+      transition={{ duration: 0.4, ease: 'easeInOut' }}
     >
       <div className="max-w-6xl mx-auto">
         <div className="flex items-center justify-between mb-6">
@@ -165,32 +240,29 @@ export const JoinRidePage: React.FC = () => {
 
         <h1 className="text-4xl font-bold text-white mb-8">Available Rides</h1>
 
-        {loading ? (
+        {!userData || loading ? (
           <div className="flex justify-center py-12">
             <div className="animate-spin rounded-full h-12 w-12 border-t-2 border-b-2 border-cyan-400"></div>
           </div>
         ) : filteredRides.length === 0 ? (
           <motion.div
             className="text-center py-12 backdrop-blur-xl bg-white/5 border border-cyan-400/20 rounded-2xl"
-            {...scaleIn}
+            initial={scaleIn.initial}
+            animate={scaleIn.animate}
+            transition={{ duration: 0.3, ease: 'easeOut' }}
           >
             <Users className="w-16 h-16 text-cyan-400 mx-auto mb-4 opacity-50" />
             <p className="text-xl text-cyan-300">No rides available matching your criteria</p>
           </motion.div>
         ) : (
-          <motion.div
-            className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6"
-            variants={staggerContainer}
-            initial="initial"
-            animate="animate"
-          >
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
             {filteredRides.map((ride, index) => (
               <motion.div
                 key={ride.id}
                 className="backdrop-blur-xl bg-white/10 border border-cyan-400/30 rounded-2xl p-6 hover:border-cyan-400 transition"
                 initial={{ opacity: 0, y: 20 }}
                 animate={{ opacity: 1, y: 0 }}
-                transition={{ delay: index * 0.1 }}
+                transition={{ delay: index * 0.1, duration: 0.3 }}
               >
                 <div className="flex items-center justify-between mb-4">
                   <div>
@@ -232,21 +304,28 @@ export const JoinRidePage: React.FC = () => {
 
                   <div className="flex items-center gap-2 text-cyan-300">
                     <Users className="w-4 h-4" />
-                    <span className="text-sm">{ride.availableSeats} seats available</span>
+                    <span className="text-sm">
+                      {ride.seatsAvailable} {ride.seatsAvailable === 1 ? 'seat' : 'seats'} available
+                    </span>
                   </div>
                 </div>
 
                 <motion.button
-                  onClick={() => handleJoinRide(ride.id)}
-                  className="w-full py-3 bg-gradient-to-r from-cyan-500 to-blue-500 text-white font-semibold rounded-lg hover:shadow-lg hover:shadow-cyan-500/50 transition"
-                  whileHover={{ scale: 1.02 }}
-                  whileTap={{ scale: 0.98 }}
+                  onClick={() => handleJoinRide(ride)}
+                  disabled={ride.seatsAvailable <= 0}
+                  className={`w-full py-3 font-semibold rounded-lg transition ${
+                    ride.seatsAvailable <= 0
+                      ? 'bg-gray-500/30 text-gray-400 cursor-not-allowed border border-gray-500/50'
+                      : 'bg-gradient-to-r from-cyan-500 to-blue-500 text-white hover:shadow-lg hover:shadow-cyan-500/50'
+                  }`}
+                  whileHover={ride.seatsAvailable > 0 ? { scale: 1.02 } : {}}
+                  whileTap={ride.seatsAvailable > 0 ? { scale: 0.98 } : {}}
                 >
-                  Join Ride
+                  {ride.seatsAvailable <= 0 ? 'Ride Full' : 'Join Ride'}
                 </motion.button>
               </motion.div>
             ))}
-          </motion.div>
+          </div>
         )}
       </div>
     </motion.div>
