@@ -13,6 +13,7 @@ import { ChatPage } from './pages/ChatPage';
 import { ProfilePage } from './pages/ProfilePage';
 import { ActivityPage } from './pages/ActivityPage';
 import { MapPage } from './pages/MapPage';
+import { ToastProvider } from './context/ToastContext';
 
 function App() {
   const [showSplash, setShowSplash] = useState(true);
@@ -21,8 +22,9 @@ function App() {
     return <SplashScreen onComplete={() => setShowSplash(false)} />;
   }
 
-  return (
-    <ThemeProvider>
+  return ( 
+    <ToastProvider>
+     <ThemeProvider>
       <AuthProvider>
         <Router>
           <AnimatePresence mode="wait">
@@ -98,6 +100,7 @@ function App() {
         </Router>
       </AuthProvider>
     </ThemeProvider>
+  </ToastProvider>
   );
 }
 

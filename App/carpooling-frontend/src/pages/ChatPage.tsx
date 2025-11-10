@@ -1,7 +1,7 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { motion, AnimatePresence } from 'framer-motion';
-import { ref, onValue, push, serverTimestamp } from 'firebase/database';
+import { ref, onValue, push, set } from 'firebase/database';
 import { doc, getDoc } from 'firebase/firestore';
 import { rtdb, db } from '../firebase';
 import { useAuth } from '../context/AuthContext';
@@ -10,8 +10,9 @@ import { messageVariant, pageTransition } from '../animations/motionVariants';
 
 interface Message {
   id: string;
-  senderId: string;
-  senderName: string;
+  senderID: string;
+  senderRole: 'driver' | 'rider';
+  senderName?: string;
   text: string;
   timestamp: number;
 }
@@ -29,36 +30,48 @@ export const ChatPage: React.FC = () => {
   const { rideID } = useParams<{ rideID: string }>();
   const { userData } = useAuth();
   const navigate = useNavigate();
+
   const [messages, setMessages] = useState<Message[]>([]);
   const [newMessage, setNewMessage] = useState('');
   const [rideInfo, setRideInfo] = useState<RideInfo | null>(null);
   const messagesEndRef = useRef<HTMLDivElement>(null);
 
+  // 🔹 Load ride info + live chat listener
   useEffect(() => {
-    if (!rideID) return;
-
+    if (!rideID || !userData) return;
     fetchRideInfo();
 
-    const messagesRef = ref(rtdb, `chats/${rideID}/messages`);
+    // ✅ Match your Firebase structure (/chats/{rideId}/{messageId})
+    const messagesRef = ref(rtdb, `chats/${rideID}`);
     const unsubscribe = onValue(messagesRef, (snapshot) => {
       const data = snapshot.val();
       if (data) {
-        const messagesList = Object.entries(data).map(([id, msg]: [string, any]) => ({
-          id,
-          ...msg,
-        }));
+        const messagesList: Message[] = Object.entries(data).map(
+          ([id, msg]: [string, any]) => ({
+            id,
+            senderID: msg.senderID,
+            senderRole: msg.senderRole,
+            senderName: msg.senderName,
+            text: msg.text,
+            timestamp: msg.timestamp,
+          })
+        );
         messagesList.sort((a, b) => a.timestamp - b.timestamp);
         setMessages(messagesList);
+      } else {
+        setMessages([]);
       }
     });
 
     return () => unsubscribe();
-  }, [rideID]);
+  }, [rideID, userData]);
 
+  // 🔹 Auto-scroll to bottom on new message
   useEffect(() => {
     messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
   }, [messages]);
 
+  // 🔹 Fetch ride details from Firestore
   const fetchRideInfo = async () => {
     if (!rideID) return;
     try {
@@ -71,18 +84,30 @@ export const ChatPage: React.FC = () => {
     }
   };
 
+  // 🔹 Send a new message
   const handleSendMessage = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!newMessage.trim() || !userData || !rideID) return;
 
+    const messageText = newMessage.trim();
+    if (messageText.length > 1000) {
+      console.warn('Message too long (max 1000 characters)');
+      return;
+    }
+
     try {
-      const messagesRef = ref(rtdb, `chats/${rideID}/messages`);
-      await push(messagesRef, {
-        senderId: userData.uid,
+      const messagesRef = ref(rtdb, `chats/${rideID}`);
+      const newMessageRef = push(messagesRef);
+
+      // ✅ Matches your Firebase rules exactly
+      await set(newMessageRef, {
+        senderID: userData.uid,
+        senderRole: userData.role, // must be 'driver' or 'rider'
         senderName: userData.name,
-        text: newMessage.trim(),
-        timestamp: serverTimestamp(),
+        text: messageText,
+        timestamp: Date.now(), // must be numeric
       });
+
       setNewMessage('');
     } catch (error) {
       console.error('Error sending message:', error);
@@ -94,6 +119,7 @@ export const ChatPage: React.FC = () => {
       className="min-h-screen bg-gradient-to-br from-slate-900 to-blue-900 dark:from-slate-950 dark:to-blue-950 flex flex-col"
       {...pageTransition}
     >
+      {/* 🔹 Header */}
       <div className="bg-slate-900/50 backdrop-blur-xl border-b border-cyan-400/30 p-4">
         <div className="max-w-4xl mx-auto flex items-center justify-between">
           <div className="flex items-center gap-4">
@@ -134,11 +160,12 @@ export const ChatPage: React.FC = () => {
         </div>
       </div>
 
+      {/* 🔹 Messages */}
       <div className="flex-1 overflow-y-auto p-4">
         <div className="max-w-4xl mx-auto space-y-4">
           <AnimatePresence>
             {messages.map((message) => {
-              const isOwn = message.senderId === userData?.uid;
+              const isOwn = message.senderID === userData?.uid;
               return (
                 <motion.div
                   key={message.id}
@@ -160,6 +187,9 @@ export const ChatPage: React.FC = () => {
                     {!isOwn && (
                       <p className="text-cyan-300 text-xs font-semibold mb-1">
                         {message.senderName}
+                        <span className="ml-2 text-cyan-400 text-[10px]">
+                          ({message.senderRole})
+                        </span>
                       </p>
                     )}
                     <p className="break-words">{message.text}</p>
@@ -182,6 +212,7 @@ export const ChatPage: React.FC = () => {
         </div>
       </div>
 
+      {/* 🔹 Message Input */}
       <div className="bg-slate-900/50 backdrop-blur-xl border-t border-cyan-400/30 p-4">
         <form
           onSubmit={handleSendMessage}
@@ -193,6 +224,7 @@ export const ChatPage: React.FC = () => {
             onChange={(e) => setNewMessage(e.target.value)}
             placeholder="Type your message..."
             className="flex-1 px-4 py-3 bg-white/5 border border-cyan-400/30 rounded-full text-white placeholder-cyan-300/50 focus:outline-none focus:border-cyan-400 transition"
+            maxLength={1000}
           />
           <motion.button
             type="submit"

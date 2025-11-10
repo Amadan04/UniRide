@@ -6,6 +6,7 @@ import { db } from '../firebase';
 import { useAuth } from '../context/AuthContext';
 import { MapPin, Calendar, Clock, Users, DollarSign, Star, ArrowLeft, Filter } from 'lucide-react';
 import { pageTransition, scaleIn } from '../animations/motionVariants';
+import { useToast } from '../context/ToastContext';
 
 interface Ride {
   id?: string; // Firestore document ID
@@ -30,6 +31,7 @@ export const JoinRidePage: React.FC = () => {
   const [filteredRides, setFilteredRides] = useState<Ride[]>([]);
   const [loading, setLoading] = useState(true);
   const [showFilters, setShowFilters] = useState(false);
+  const toast = useToast();
   const [filters, setFilters] = useState({
     destination: '',
     date: '',
@@ -117,13 +119,13 @@ export const JoinRidePage: React.FC = () => {
 
       // Prevent duplicate joining
       if (ride.passengers?.some(p => p.uid === userData.uid)) {
-        alert('You have already joined this ride!');
+        toast.warning('You have already joined this ride!');
         return;
       }
 
       // Check if seats are still available
       if (ride.seatsAvailable <= 0) {
-        alert('Sorry, this ride is now full!');
+        toast.warning('Sorry, this ride is now full!');
         return;
       }
 
@@ -169,12 +171,12 @@ export const JoinRidePage: React.FC = () => {
 
       console.log('✅ Booking created successfully!');
 
-      alert('Successfully joined the ride!');
+      toast.success('Successfully joined the ride!');
       navigate(`/chat/${ride.id}`);
     } catch (error) {
       console.error('❌ Error joining ride:', error);
       console.error('Error details:', JSON.stringify(error, null, 2));
-      alert('Failed to join ride. Please try again.');
+      toast.error('Failed to join ride. Please try again.');
     }
   };
 

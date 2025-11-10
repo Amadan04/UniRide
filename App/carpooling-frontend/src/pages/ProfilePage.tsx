@@ -7,12 +7,14 @@ import { db, auth } from '../firebase';
 import { useAuth } from '../context/AuthContext';
 import { User, Mail, Calendar, GraduationCap, Star, ArrowLeft, Save } from 'lucide-react';
 import { pageTransition, scaleIn } from '../animations/motionVariants';
+import { useToast } from '../context/ToastContext';
 
 export const ProfilePage: React.FC = () => {
   const { userData, currentUser, refreshUserData } = useAuth();
   const navigate = useNavigate();
   const [editing, setEditing] = useState(false);
   const [loading, setLoading] = useState(false);
+  const { toast } = useToast();
   const [formData, setFormData] = useState({
     name: userData?.name || '',
     age: userData?.age?.toString() || '',
@@ -39,10 +41,10 @@ export const ProfilePage: React.FC = () => {
 
       await refreshUserData();
       setEditing(false);
-      alert('Profile updated successfully!');
+      toast.success('Profile updated successfully!');
     } catch (error) {
       console.error('Error updating profile:', error);
-      alert('Failed to update profile. Please try again.');
+      toast.error('Failed to update profile. Please try again.');
     } finally {
       setLoading(false);
     }

@@ -6,6 +6,7 @@ import { db } from '../firebase';
 import { useAuth } from '../context/AuthContext';
 import { Calendar, MapPin, Clock, Star, ArrowLeft, MessageSquare } from 'lucide-react';
 import { pageTransition, staggerContainer, scaleIn } from '../animations/motionVariants';
+import { useToast } from '../context/ToastContext';
 
 interface Ride {
   id: string;
@@ -28,6 +29,7 @@ export const ActivityPage: React.FC = () => {
   const [loading, setLoading] = useState(true);
   const [ratingRide, setRatingRide] = useState<string | null>(null);
   const [rating, setRating] = useState(5);
+  const { toast } = useToast();
   const [review, setReview] = useState('');
 
   useEffect(() => {
@@ -95,13 +97,13 @@ export const ActivityPage: React.FC = () => {
 
       await setDoc(doc(collection(db, 'ratings')), ratingData);
 
-      alert('Rating submitted successfully!');
+      toast.success('Rating submitted successfully!');
       setRatingRide(null);
       setRating(5);
       setReview('');
     } catch (error) {
       console.error('Error submitting rating:', error);
-      alert('Failed to submit rating. Please try again.');
+      toast.error('Failed to submit rating. Please try again.');
     }
   };
 

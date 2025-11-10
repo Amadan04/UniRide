@@ -7,12 +7,14 @@ import { useAuth } from '../context/AuthContext';
 import { pageTransition, scaleIn } from '../animations/motionVariants';
 import confetti from 'canvas-confetti';
 import { auth, db } from "../firebase";
+import { useToast } from '../context/ToastContext';
 
 
 export const CreateRidePage: React.FC = () => {
   const { userData } = useAuth();
   const navigate = useNavigate();
   const [loading, setLoading] = useState(false);
+  const toast = useToast();
   const [formData, setFormData] = useState({
     pickup: '',
     destination: '',
@@ -59,7 +61,7 @@ export const CreateRidePage: React.FC = () => {
     }, 1500);
   } catch (error) {
     console.error('Error creating ride:', error);
-    alert('Failed to create ride. Please try again.');
+    toast.error('Failed to create ride. Please try again.');
     setLoading(false);
   }
 };

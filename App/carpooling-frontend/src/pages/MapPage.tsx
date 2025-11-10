@@ -7,6 +7,7 @@ import { rtdb, db } from '../firebase';
 import { useAuth } from '../context/AuthContext';
 import { ArrowLeft, Navigation, MapPin } from 'lucide-react';
 import { pageTransition } from '../animations/motionVariants';
+import { useToast } from '../context/ToastContext';
 
 interface Location {
   lat: number;
@@ -28,6 +29,7 @@ export const MapPage: React.FC = () => {
   const navigate = useNavigate();
   const [driverLocation, setDriverLocation] = useState<Location | null>(null);
   const [rideInfo, setRideInfo] = useState<RideInfo | null>(null);
+  const { toast } = useToast();
   const [tracking, setTracking] = useState(false);
 
   useEffect(() => {
@@ -84,7 +86,7 @@ export const MapPage: React.FC = () => {
     if (navigator.geolocation) {
       setTracking(true);
     } else {
-      alert('Geolocation is not supported by your browser');
+      toast.error('Geolocation is not supported by your browser');
     }
   };
 

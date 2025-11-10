@@ -7,6 +7,7 @@ import { Car, Mail, Lock, User, Calendar, Users, GraduationCap } from 'lucide-re
 import { fadeInUp } from '../animations/gsapAnimations';
 import { pageTransition, scaleIn } from '../animations/motionVariants';
 import { doc, setDoc, serverTimestamp } from "firebase/firestore";
+import { useToast } from '../context/ToastContext';
 
 export const AuthPage: React.FC = () => {
   const [isLogin, setIsLogin] = useState(true);
@@ -14,6 +15,8 @@ export const AuthPage: React.FC = () => {
   const [error, setError] = useState('');
   const navigate = useNavigate();
   const formRef = useRef<HTMLDivElement>(null);
+  const [passwordError, setPasswordError] = useState('');
+  const { toast } = useToast();
 
   const [formData, setFormData] = useState({
     email: '',
@@ -25,6 +28,8 @@ export const AuthPage: React.FC = () => {
     role: 'rider' as 'rider' | 'driver',
   });
 
+  const passwordRegex = /^(?=.*[a-z])(?=.*[A-Z])(?=.*\d).{8,}$/;
+
   useEffect(() => {
     if (formRef.current) {
       fadeInUp(formRef.current, 0.2);
@@ -34,12 +39,22 @@ export const AuthPage: React.FC = () => {
   const handleSubmit = async (e: React.FormEvent) => {
   e.preventDefault();
   setError('');
+  setPasswordError('');
   setLoading(true);
+
+  // Validate password for signup
+  if (!isLogin && !passwordRegex.test(formData.password)) {
+    setPasswordError('Password must be at least 8 characters with 1 uppercase, 1 lowercase, and 1 number');
+    toast.error('Invalid password format');
+    setLoading(false);
+    return;
+  }
 
   try {
     if (isLogin) {
       // 🔐 LOGIN
       await signInWithEmailAndPassword(auth, formData.email, formData.password);
+      toast.success('Welcome back!');
       navigate('/');
     } else {
       // 🆕 SIGN UP
@@ -60,19 +75,24 @@ export const AuthPage: React.FC = () => {
       });
 
       console.log("✅ Firestore user created successfully");
+      toast.success('Account created successfully!');
       navigate('/');
     }
   } catch (err: any) {
     console.error("❌ Signup error:", err);
-    setError(err.message || 'An error occurred');
+  setError(err.message || 'An error occurred');
+  toast.error(err.message || 'Authentication failed');
   } finally {
     setLoading(false);
   }
 };
 
   const handleChange = (e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement>) => {
-    setFormData({ ...formData, [e.target.name]: e.target.value });
-  };
+  setFormData({ ...formData, [e.target.name]: e.target.value });
+  if (e.target.name === 'password') {
+    setPasswordError('');
+  }
+};
 
   return (
     <motion.div
@@ -168,6 +188,9 @@ export const AuthPage: React.FC = () => {
                 required
                 className="w-full pl-12 pr-4 py-3 bg-white/5 border border-cyan-400/30 rounded-lg text-white placeholder-cyan-300/50 focus:outline-none focus:border-cyan-400 transition"
               />
+              {!isLogin && passwordError && (
+                <p className="text-red-400 text-sm mt-1">{passwordError}</p>
+              )}
             </div>
 
             {!isLogin && (
@@ -232,8 +255,9 @@ export const AuthPage: React.FC = () => {
 
             <motion.button
               type="submit"
-              disabled={loading}
+              disabled={loading || (!isLogin && !passwordRegex.test(formData.password))}
               className="w-full py-3 bg-gradient-to-r from-cyan-500 to-blue-500 text-white font-semibold rounded-lg shadow-lg hover:shadow-cyan-500/50 transition disabled:opacity-50"
+
               whileHover={{ scale: 1.02 }}
               whileTap={{ scale: 0.98 }}
             >
