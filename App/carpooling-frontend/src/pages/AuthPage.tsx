@@ -16,7 +16,7 @@ export const AuthPage: React.FC = () => {
   const navigate = useNavigate();
   const formRef = useRef<HTMLDivElement>(null);
   const [passwordError, setPasswordError] = useState('');
-  const { toast } = useToast();
+  const toast = useToast();
 
   const [formData, setFormData] = useState({
     email: '',

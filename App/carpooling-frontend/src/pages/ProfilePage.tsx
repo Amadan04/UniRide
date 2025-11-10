@@ -3,18 +3,22 @@ import { useNavigate } from 'react-router-dom';
 import { motion } from 'framer-motion';
 import { doc, updateDoc } from 'firebase/firestore';
 import { updatePassword } from 'firebase/auth';
-import { db, auth } from '../firebase';
+import { db, auth, storage } from '../firebase';
 import { useAuth } from '../context/AuthContext';
-import { User, Mail, Calendar, GraduationCap, Star, ArrowLeft, Save } from 'lucide-react';
+import { User, Mail, Calendar, GraduationCap, Star, ArrowLeft, Save, Camera, Loader } from 'lucide-react';
 import { pageTransition, scaleIn } from '../animations/motionVariants';
 import { useToast } from '../context/ToastContext';
+import { ref, uploadBytes, getDownloadURL } from 'firebase/storage';
+
+
 
 export const ProfilePage: React.FC = () => {
   const { userData, currentUser, refreshUserData } = useAuth();
   const navigate = useNavigate();
   const [editing, setEditing] = useState(false);
   const [loading, setLoading] = useState(false);
-  const { toast } = useToast();
+  const toast = useToast();
+  const [uploading, setUploading] = useState(false);
   const [formData, setFormData] = useState({
     name: userData?.name || '',
     age: userData?.age?.toString() || '',
@@ -50,6 +54,42 @@ export const ProfilePage: React.FC = () => {
     }
   };
 
+  const handleAvatarUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file || !userData) return;
+
+    // Validate file type
+    if (!file.type.startsWith('image/')) {
+      toast.error('Please select an image file');
+      return;
+    }
+
+    // Validate file size (max 5MB)
+    if (file.size > 5 * 1024 * 1024) {
+      toast.error('Image size must be less than 5MB');
+      return;
+    }
+
+    setUploading(true);
+    try {
+      const storageRef = ref(storage, `avatars/${userData.uid}`);
+      await uploadBytes(storageRef, file);
+      const url = await getDownloadURL(storageRef);
+      
+      await updateDoc(doc(db, 'users', userData.uid), {
+        profileImage: url
+      });
+      
+      await refreshUserData();
+      toast.success('Avatar updated successfully!');
+    } catch (error) {
+      console.error('Error uploading avatar:', error);
+      toast.error('Failed to upload avatar. Please try again.');
+    } finally {
+      setUploading(false);
+    }
+  };
+
   const handleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     setFormData({ ...formData, [e.target.name]: e.target.value });
   };
@@ -80,10 +120,49 @@ export const ProfilePage: React.FC = () => {
           className="backdrop-blur-xl bg-white/10 border border-cyan-400/30 rounded-2xl shadow-2xl p-8"
           {...scaleIn}
         >
-          <div className="flex items-center justify-center mb-6">
-            <div className="w-24 h-24 bg-gradient-to-br from-cyan-400 to-blue-500 rounded-full flex items-center justify-center">
-              <User className="w-12 h-12 text-white" />
+          <div className="flex flex-col items-center justify-center mb-6">
+            <div className="relative group">
+              <div className="w-24 h-24 bg-gradient-to-br from-cyan-400 to-blue-500 rounded-full flex items-center justify-center overflow-hidden">
+                {userData.profileImage ? (
+                  <img 
+                    src={userData.profileImage} 
+                    alt={userData.name}
+                    className="w-full h-full object-cover"
+                  />
+                ) : (
+                  <User className="w-12 h-12 text-white" />
+                )}
+              </div>
+              
+              {/* Upload overlay */}
+              <label 
+                htmlFor="avatar-upload"
+                className="absolute inset-0 bg-black/60 rounded-full flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity cursor-pointer"
+              >
+                {uploading ? (
+                  <Loader className="w-6 h-6 text-white animate-spin" />
+                ) : (
+                  <Camera className="w-6 h-6 text-white" />
+                )}
+              </label>
+              
+              <input
+                id="avatar-upload"
+                type="file"
+                accept="image/*"
+                onChange={handleAvatarUpload}
+                disabled={uploading}
+                className="hidden"
+              />
             </div>
+            
+            {uploading && (
+              <p className="text-cyan-300 text-sm mt-2">Uploading...</p>
+            )}
+            
+            {!uploading && (
+              <p className="text-cyan-300/70 text-xs mt-2">Click to upload avatar</p>
+            )}
           </div>
 
           <h1 className="text-4xl font-bold text-white text-center mb-2">{userData.name}</h1>

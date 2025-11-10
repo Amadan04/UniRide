@@ -1,12 +1,13 @@
 import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { motion } from 'framer-motion';
 import { collection, query, where, getDocs, doc, updateDoc, arrayUnion, addDoc } from 'firebase/firestore';
 import { db } from '../firebase';
 import { useAuth } from '../context/AuthContext';
-import { MapPin, Calendar, Clock, Users, DollarSign, Star, ArrowLeft, Filter } from 'lucide-react';
+import { MapPin, Calendar, Clock, Users, DollarSign, Star, ArrowLeft, Filter, X } from 'lucide-react';
 import { pageTransition, scaleIn } from '../animations/motionVariants';
 import { useToast } from '../context/ToastContext';
+import { motion, AnimatePresence } from 'framer-motion';
+
 
 interface Ride {
   id?: string; // Firestore document ID
@@ -31,6 +32,8 @@ export const JoinRidePage: React.FC = () => {
   const [filteredRides, setFilteredRides] = useState<Ride[]>([]);
   const [loading, setLoading] = useState(true);
   const [showFilters, setShowFilters] = useState(false);
+  const [showPassengerModal, setShowPassengerModal] = useState(false);
+  const [selectedRide, setSelectedRide] = useState<Ride | null>(null);
   const toast = useToast();
   const [filters, setFilters] = useState({
     destination: '',
@@ -304,7 +307,13 @@ export const JoinRidePage: React.FC = () => {
                     </div>
                   </div>
 
-                  <div className="flex items-center gap-2 text-cyan-300">
+                  <div 
+                    className="flex items-center gap-2 text-cyan-300 cursor-pointer hover:text-cyan-400 transition"
+                    onClick={() => {
+                      setSelectedRide(ride);
+                      setShowPassengerModal(true);
+                    }}
+                  >
                     <Users className="w-4 h-4" />
                     <span className="text-sm">
                       {ride.seatsAvailable} {ride.seatsAvailable === 1 ? 'seat' : 'seats'} available
@@ -330,6 +339,76 @@ export const JoinRidePage: React.FC = () => {
           </div>
         )}
       </div>
+      {/* Passenger List Modal */}
+      <AnimatePresence>
+        {showPassengerModal && selectedRide && (
+          <motion.div
+            className="fixed inset-0 bg-black/60 backdrop-blur-sm flex items-center justify-center z-50 px-4"
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            exit={{ opacity: 0 }}
+            onClick={() => setShowPassengerModal(false)}
+          >
+            <motion.div
+              className="backdrop-blur-xl bg-white/10 border border-cyan-400/30 rounded-2xl p-6 max-w-md w-full"
+              initial={{ scale: 0.9, opacity: 0 }}
+              animate={{ scale: 1, opacity: 1 }}
+              exit={{ scale: 0.9, opacity: 0 }}
+              onClick={(e) => e.stopPropagation()}
+            >
+              <div className="flex items-center justify-between mb-4">
+                <h3 className="text-2xl font-bold text-white">Passengers</h3>
+                <button
+                  onClick={() => setShowPassengerModal(false)}
+                  className="text-cyan-400 hover:text-cyan-300 transition"
+                >
+                  <X className="w-6 h-6" />
+                </button>
+              </div>
+
+              <div className="space-y-3">
+                {selectedRide.passengers && selectedRide.passengers.length > 0 ? (
+                  selectedRide.passengers.map((passenger, index) => (
+                    <motion.div
+                      key={passenger.uid}
+                      className="bg-white/5 border border-cyan-400/20 rounded-lg p-4"
+                      initial={{ opacity: 0, x: -20 }}
+                      animate={{ opacity: 1, x: 0 }}
+                      transition={{ delay: index * 0.1 }}
+                    >
+                      <div className="flex items-center justify-between">
+                        <div>
+                          <p className="text-white font-semibold">{passenger.name}</p>
+                          <p className="text-cyan-300/70 text-sm">
+                            Joined {new Date(passenger.joinedAt).toLocaleDateString('en-US', {
+                              month: 'short',
+                              day: 'numeric',
+                              hour: '2-digit',
+                              minute: '2-digit'
+                            })}
+                          </p>
+                        </div>
+                        <Users className="w-5 h-5 text-cyan-400" />
+                      </div>
+                    </motion.div>
+                  ))
+                ) : (
+                  <div className="text-center py-8">
+                    <Users className="w-12 h-12 text-cyan-400/50 mx-auto mb-2" />
+                    <p className="text-cyan-300/70">No passengers yet</p>
+                  </div>
+                )}
+              </div>
+
+              <div className="mt-4 pt-4 border-t border-cyan-400/20">
+                <p className="text-cyan-300 text-sm text-center">
+                  {selectedRide.seatsAvailable} {selectedRide.seatsAvailable === 1 ? 'seat' : 'seats'} remaining
+                </p>
+              </div>
+            </motion.div>
+          </motion.div>
+        )}
+      </AnimatePresence>
     </motion.div>
   );
 };

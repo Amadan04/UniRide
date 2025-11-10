@@ -31,3 +31,22 @@
     scrollbar-width: none;
   }
 }
+
+
+/* Leaflet map styling fixes */
+.leaflet-container {
+  font-family: inherit;
+}
+
+.leaflet-popup-content-wrapper {
+  border-radius: 0.5rem;
+}
+
+.leaflet-popup-content {
+  margin: 0.75rem;
+}
+
+/* Make markers more visible on dark background */
+.leaflet-marker-icon {
+  filter: drop-shadow(0 4px 6px rgba(0, 0, 0, 0.3));
+}

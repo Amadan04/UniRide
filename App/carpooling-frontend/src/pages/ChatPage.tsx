@@ -5,8 +5,9 @@ import { ref, onValue, push, set } from 'firebase/database';
 import { doc, getDoc } from 'firebase/firestore';
 import { rtdb, db } from '../firebase';
 import { useAuth } from '../context/AuthContext';
-import { Send, ArrowLeft, Map, Users } from 'lucide-react';
+import { Send, ArrowLeft, Map, Users, X } from 'lucide-react';
 import { messageVariant, pageTransition } from '../animations/motionVariants';
+
 
 interface Message {
   id: string;
@@ -17,13 +18,14 @@ interface Message {
   timestamp: number;
 }
 
+
 interface RideInfo {
   driverName: string;
   pickup: string;
   destination: string;
   date: string;
   time: string;
-  passengers: { uid: string; name: string }[];
+  passengers: { uid: string; name: string; joinedAt: string }[];
 }
 
 export const ChatPage: React.FC = () => {
@@ -35,6 +37,7 @@ export const ChatPage: React.FC = () => {
   const [newMessage, setNewMessage] = useState('');
   const [rideInfo, setRideInfo] = useState<RideInfo | null>(null);
   const messagesEndRef = useRef<HTMLDivElement>(null);
+  const [showPassengerModal, setShowPassengerModal] = useState(false);
 
   // 🔹 Load ride info + live chat listener
   useEffect(() => {
@@ -151,10 +154,13 @@ export const ChatPage: React.FC = () => {
             </button>
 
             {rideInfo && (
-              <div className="flex items-center gap-2 px-4 py-2 bg-white/5 border border-cyan-400/30 rounded-lg">
+              <button
+                onClick={() => setShowPassengerModal(true)}
+                className="flex items-center gap-2 px-4 py-2 bg-white/5 border border-cyan-400/30 rounded-lg hover:bg-cyan-500/20 transition cursor-pointer"
+              >
                 <Users className="w-5 h-5 text-cyan-400" />
                 <span className="text-white">{rideInfo.passengers?.length || 0}</span>
-              </div>
+              </button>
             )}
           </div>
         </div>
@@ -237,6 +243,79 @@ export const ChatPage: React.FC = () => {
           </motion.button>
         </form>
       </div>
+
+      {/* Passenger List Modal */}
+      <AnimatePresence>
+        {showPassengerModal && rideInfo && (
+          <motion.div
+            className="fixed inset-0 bg-black/60 backdrop-blur-sm flex items-center justify-center z-50 px-4"
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            exit={{ opacity: 0 }}
+            onClick={() => setShowPassengerModal(false)}
+          >
+            <motion.div
+              className="backdrop-blur-xl bg-white/10 border border-cyan-400/30 rounded-2xl p-6 max-w-md w-full"
+              initial={{ scale: 0.9, opacity: 0 }}
+              animate={{ scale: 1, opacity: 1 }}
+              exit={{ scale: 0.9, opacity: 0 }}
+              onClick={(e) => e.stopPropagation()}
+            >
+              <div className="flex items-center justify-between mb-4">
+                <h3 className="text-2xl font-bold text-white">Passengers</h3>
+                <button
+                  onClick={() => setShowPassengerModal(false)}
+                  className="text-cyan-400 hover:text-cyan-300 transition"
+                >
+                  <X className="w-6 h-6" />
+                </button>
+              </div>
+
+              <div className="space-y-3">
+                {rideInfo.passengers && rideInfo.passengers.length > 0 ? (
+                  rideInfo.passengers.map((passenger, index) => (
+                    <motion.div
+                      key={passenger.uid}
+                      className="bg-white/5 border border-cyan-400/20 rounded-lg p-4"
+                      initial={{ opacity: 0, x: -20 }}
+                      animate={{ opacity: 1, x: 0 }}
+                      transition={{ delay: index * 0.1 }}
+                    >
+                      <div className="flex items-center justify-between">
+                        <div>
+                          <p className="text-white font-semibold">{passenger.name}</p>
+                          {passenger.joinedAt && (
+                            <p className="text-cyan-300/70 text-sm">
+                              Joined {new Date(passenger.joinedAt).toLocaleDateString('en-US', {
+                                month: 'short',
+                                day: 'numeric',
+                                hour: '2-digit',
+                                minute: '2-digit'
+                              })}
+                            </p>
+                          )}
+                        </div>
+                        <Users className="w-5 h-5 text-cyan-400" />
+                      </div>
+                    </motion.div>
+                  ))
+                ) : (
+                  <div className="text-center py-8">
+                    <Users className="w-12 h-12 text-cyan-400/50 mx-auto mb-2" />
+                    <p className="text-cyan-300/70">No passengers yet</p>
+                  </div>
+                )}
+              </div>
+
+              <div className="mt-4 pt-4 border-t border-cyan-400/20">
+                <p className="text-cyan-300 text-sm text-center">
+                  {rideInfo.passengers?.length || 0} {rideInfo.passengers?.length === 1 ? 'passenger' : 'passengers'}
+                </p>
+              </div>
+            </motion.div>
+          </motion.div>
+        )}
+      </AnimatePresence>
     </motion.div>
   );
 };
