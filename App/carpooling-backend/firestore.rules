@@ -32,7 +32,12 @@ service cloud.firestore {
       allow update: if isOwner(uid)
                     // Prevent changing critical fields
                     && request.resource.data.uid == resource.data.uid
-                    && request.resource.data.createdAt == resource.data.createdAt;
+                    && request.resource.data.createdAt == resource.data.createdAt
+
+                    // OR allow authenticated users to update rating fields only (for rating system)
+                    || (isAuthenticated()
+                        && request.resource.data.diff(resource.data).affectedKeys()
+                          .hasOnly(['avgRating', 'ratingsCount', 'updatedAt']));
       
       // Users cannot delete their profile (use Cloud Function for proper cleanup)
       allow delete: if false;

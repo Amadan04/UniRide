@@ -681,3 +681,318 @@ exports.sendEmail = functions.https.onCall(async (data, context) => {
     throw new functions.https.HttpsError('internal', error.message);
   }
 });
+
+// ============================================================================
+// SCHEDULED FUNCTION: Auto-Complete Expired Rides
+// Runs every hour to automatically complete rides that have passed
+// ============================================================================
+
+exports.autoCompleteExpiredRides = functions.pubsub
+  .schedule('every 1 hours')
+  .timeZone('America/New_York') // Change to your timezone
+  .onRun(async (context) => {
+    try {
+      console.log('Running auto-complete expired rides...');
+
+      const now = admin.firestore.Timestamp.now();
+      const twoHoursAgo = new Date(Date.now() - 2 * 60 * 60 * 1000);
+
+      // Find all active rides that should have completed 2+ hours ago
+      const expiredRidesSnapshot = await db.collection('rides')
+        .where('status', '==', 'active')
+        .where('rideDateTime', '<', admin.firestore.Timestamp.fromDate(twoHoursAgo))
+        .get();
+
+      if (expiredRidesSnapshot.empty) {
+        console.log('No expired rides found');
+        return null;
+      }
+
+      const batch = db.batch();
+      let completedCount = 0;
+
+      expiredRidesSnapshot.forEach((doc) => {
+        batch.update(doc.ref, {
+          status: 'completed',
+          completedAt: now,
+          autoCompleted: true,
+          updatedAt: now
+        });
+        completedCount++;
+      });
+
+      await batch.commit();
+
+      console.log(`Successfully auto-completed ${completedCount} expired rides`);
+      return { completedCount };
+    } catch (error) {
+      console.error('Error in autoCompleteExpiredRides:', error);
+      return null;
+    }
+  });
+
+// ============================================================================
+// SCHEDULED FUNCTION: Send Completion Reminders
+// Runs every 30 minutes to remind drivers to complete rides
+// ============================================================================
+
+exports.sendCompletionReminders = functions.pubsub
+  .schedule('every 30 minutes')
+  .timeZone('America/New_York') // Change to your timezone
+  .onRun(async (context) => {
+    try {
+      console.log('Checking for rides needing completion reminders...');
+
+      const now = new Date();
+      const oneHourAgo = new Date(now.getTime() - 60 * 60 * 1000);
+      const twoHoursAgo = new Date(now.getTime() - 2 * 60 * 60 * 1000);
+
+      // Find rides that finished 1-2 hours ago but not yet marked complete
+      const ridesNeedingReminderSnapshot = await db.collection('rides')
+        .where('status', '==', 'active')
+        .where('rideDateTime', '>=', admin.firestore.Timestamp.fromDate(twoHoursAgo))
+        .where('rideDateTime', '<', admin.firestore.Timestamp.fromDate(oneHourAgo))
+        .get();
+
+      if (ridesNeedingReminderSnapshot.empty) {
+        console.log('No rides needing completion reminders');
+        return null;
+      }
+
+      const promises = [];
+
+      ridesNeedingReminderSnapshot.forEach((rideDoc) => {
+        const ride = rideDoc.data();
+        const rideID = rideDoc.id;
+
+        // Send reminder to driver
+        const driverPromise = db.collection('users').doc(ride.driverID).get()
+          .then(async (driverDoc) => {
+            if (driverDoc.exists) {
+              const driverData = driverDoc.data();
+
+              // Send push notification
+              if (driverData.fcmToken) {
+                await sendPushNotification(
+                  driverData.fcmToken,
+                  '✅ Mark Ride as Complete?',
+                  `Your ride to ${ride.destination} should be finished. Please mark it as complete.`,
+                  {
+                    type: 'completion_reminder',
+                    rideID,
+                    screen: 'ActivityPage'
+                  }
+                );
+              }
+
+              // Send email reminder
+              if (driverData.email) {
+                await sendEmailNotification(
+                  driverData.email,
+                  'Ride Completion Reminder',
+                  `
+                    <h2>Mark Your Ride as Complete</h2>
+                    <p>Hi ${driverData.name},</p>
+                    <p>Your ride to <strong>${ride.destination}</strong> scheduled for ${ride.date} at ${ride.time} should be finished.</p>
+                    <p>Please log in to the app and mark this ride as complete so riders can rate their experience.</p>
+                    <p><strong>Ride Details:</strong></p>
+                    <ul>
+                      <li>From: ${ride.pickup}</li>
+                      <li>To: ${ride.destination}</li>
+                      <li>Date: ${ride.date}</li>
+                      <li>Time: ${ride.time}</li>
+                    </ul>
+                    <p>If you don't mark it as complete within 24 hours, it will be automatically completed.</p>
+                  `
+                );
+              }
+            }
+          });
+
+        promises.push(driverPromise);
+
+        // Also send reminder to riders
+        if (ride.riders && ride.riders.length > 0) {
+          ride.riders.forEach((riderID) => {
+            const riderPromise = db.collection('users').doc(riderID).get()
+              .then(async (riderDoc) => {
+                if (riderDoc.exists) {
+                  const riderData = riderDoc.data();
+
+                  if (riderData.fcmToken) {
+                    await sendPushNotification(
+                      riderData.fcmToken,
+                      '📝 Ride Complete?',
+                      `Was your ride to ${ride.destination} completed? You can rate your experience soon.`,
+                      {
+                        type: 'ride_status_check',
+                        rideID,
+                        screen: 'ActivityPage'
+                      }
+                    );
+                  }
+                }
+              });
+            promises.push(riderPromise);
+          });
+        }
+      });
+
+      await Promise.all(promises);
+
+      console.log(`Sent completion reminders for ${ridesNeedingReminderSnapshot.size} rides`);
+      return { remindersSent: ridesNeedingReminderSnapshot.size };
+    } catch (error) {
+      console.error('Error in sendCompletionReminders:', error);
+      return null;
+    }
+  });
+
+// ============================================================================
+// TRIGGER: Send Rating Prompts When Ride Completes
+// Triggers when a ride status changes to 'completed'
+// ============================================================================
+
+exports.sendRatingPromptsOnCompletion = functions.firestore
+  .document('rides/{rideID}')
+  .onUpdate(async (change, context) => {
+    try {
+      const beforeData = change.before.data();
+      const afterData = change.after.data();
+      const rideID = context.params.rideID;
+
+      // Check if ride just became completed
+      if (beforeData.status !== 'completed' && afterData.status === 'completed') {
+        console.log(`Ride ${rideID} just completed - sending rating prompts`);
+
+        const { driverID, riders, destination, pickup, date, time } = afterData;
+
+        const promises = [];
+
+        // Send notification to driver to rate riders
+        const driverPromise = db.collection('users').doc(driverID).get()
+          .then(async (driverDoc) => {
+            if (driverDoc.exists) {
+              const driverData = driverDoc.data();
+
+              // Send push notification
+              if (driverData.fcmToken) {
+                await sendPushNotification(
+                  driverData.fcmToken,
+                  '⭐ Rate Your Riders',
+                  `Your ride to ${destination} is complete! How was your experience?`,
+                  {
+                    type: 'rating_prompt',
+                    rideID,
+                    userType: 'driver',
+                    screen: 'ActivityPage'
+                  }
+                );
+              }
+
+              // Send email
+              if (driverData.email) {
+                await sendEmailNotification(
+                  driverData.email,
+                  'Rate Your Recent Ride',
+                  `
+                    <div style="font-family: Arial, sans-serif; max-width: 600px;">
+                      <h2 style="color: #4CAF50;">⭐ How Was Your Ride?</h2>
+                      <p>Hi ${driverData.name},</p>
+                      <p>Your ride to <strong>${destination}</strong> on ${date} at ${time} has been completed!</p>
+                      <p>We'd love to hear about your experience. Please take a moment to rate your riders.</p>
+                      <div style="background-color: #f5f5f5; padding: 20px; border-radius: 10px; margin: 20px 0;">
+                        <h3 style="margin-top: 0;">Ride Details</h3>
+                        <p><strong>📍 From:</strong> ${pickup}</p>
+                        <p><strong>📍 To:</strong> ${destination}</p>
+                        <p><strong>📅 Date:</strong> ${date}</p>
+                        <p><strong>🕐 Time:</strong> ${time}</p>
+                        <p><strong>👥 Riders:</strong> ${riders.length}</p>
+                      </div>
+                      <p>Your feedback helps maintain a safe and reliable community!</p>
+                      <p style="margin-top: 30px;">
+                        <a href="https://your-app-link.com/activity"
+                           style="background-color: #4CAF50; color: white; padding: 12px 24px;
+                                  text-decoration: none; border-radius: 5px; display: inline-block;">
+                          Rate Now
+                        </a>
+                      </p>
+                    </div>
+                  `
+                );
+              }
+            }
+          });
+
+        promises.push(driverPromise);
+
+        // Send notification to all riders to rate the driver
+        if (riders && riders.length > 0) {
+          riders.forEach((riderID) => {
+            const riderPromise = db.collection('users').doc(riderID).get()
+              .then(async (riderDoc) => {
+                if (riderDoc.exists) {
+                  const riderData = riderDoc.data();
+
+                  // Send push notification
+                  if (riderData.fcmToken) {
+                    await sendPushNotification(
+                      riderData.fcmToken,
+                      '⭐ Rate Your Ride',
+                      `Your ride to ${destination} is complete! How was it?`,
+                      {
+                        type: 'rating_prompt',
+                        rideID,
+                        userType: 'rider',
+                        screen: 'ActivityPage'
+                      }
+                    );
+                  }
+
+                  // Send email
+                  if (riderData.email) {
+                    await sendEmailNotification(
+                      riderData.email,
+                      'Rate Your Recent Ride',
+                      `
+                        <div style="font-family: Arial, sans-serif; max-width: 600px;">
+                          <h2 style="color: #4CAF50;">⭐ How Was Your Ride?</h2>
+                          <p>Hi ${riderData.name},</p>
+                          <p>Your ride to <strong>${destination}</strong> on ${date} at ${time} has been completed!</p>
+                          <p>We hope you had a great experience. Please take a moment to rate your driver.</p>
+                          <div style="background-color: #f5f5f5; padding: 20px; border-radius: 10px; margin: 20px 0;">
+                            <h3 style="margin-top: 0;">Ride Details</h3>
+                            <p><strong>📍 From:</strong> ${pickup}</p>
+                            <p><strong>📍 To:</strong> ${destination}</p>
+                            <p><strong>📅 Date:</strong> ${date}</p>
+                            <p><strong>🕐 Time:</strong> ${time}</p>
+                          </div>
+                          <p>Your feedback helps us build a better community!</p>
+                          <p style="margin-top: 30px;">
+                            <a href="https://your-app-link.com/activity"
+                               style="background-color: #4CAF50; color: white; padding: 12px 24px;
+                                      text-decoration: none; border-radius: 5px; display: inline-block;">
+                              Rate Now
+                            </a>
+                          </p>
+                        </div>
+                      `
+                    );
+                  }
+                }
+              });
+
+            promises.push(riderPromise);
+          });
+        }
+
+        await Promise.all(promises);
+        console.log(`Sent rating prompts for ride ${rideID}`);
+      }
+
+      return null;
+    } catch (error) {
+      console.error('Error sending rating prompts:', error);
+      return null;
+    }
+  });

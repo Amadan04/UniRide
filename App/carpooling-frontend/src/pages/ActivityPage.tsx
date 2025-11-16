@@ -36,12 +36,85 @@ export const ActivityPage: React.FC = () => {
   const [editMode, setEditMode] = useState(false);
   const [editCost, setEditCost] = useState('');
   const [editTime, setEditTime] = useState('');
+  const [showRatingPrompt, setShowRatingPrompt] = useState(false);
+  const [pendingRatingRide, setPendingRatingRide] = useState<Ride | null>(null);
 
-  
+
 
   useEffect(() => {
     fetchRides();
   }, [userData]);
+
+  // Check for pending ratings when completed rides load
+  useEffect(() => {
+    const checkPendingRatings = async () => {
+      if (!userData || completedRides.length === 0) return;
+
+      // Find rides that haven't been rated yet
+      const unratedRides = [];
+
+      for (const ride of completedRides) {
+        // Check if user has already rated this ride
+        const ratingsRef = collection(db, 'ratings');
+        const ratingQuery = query(
+          ratingsRef,
+          where('rideID', '==', ride.id),
+          where('fromUserID', '==', userData.uid)
+        );
+
+        const ratingSnapshot = await getDocs(ratingQuery);
+
+        if (ratingSnapshot.empty) {
+          unratedRides.push(ride);
+        }
+      }
+
+      // Show popup if there are unrated rides
+      if (unratedRides.length > 0 && !showRatingPrompt) {
+        setPendingRatingRide(unratedRides[0]); // Show first unrated ride
+        setShowRatingPrompt(true);
+      }
+    };
+
+    checkPendingRatings();
+  }, [completedRides, userData]);
+
+  // Auto-complete expired rides when page loads
+  useEffect(() => {
+    const autoCompleteExpiredRides = async () => {
+      if (!userData) return;
+
+      const now = new Date();
+      const expiredRides = activeRides.filter(ride => {
+        const rideDateTime = new Date(`${ride.date} ${ride.time}`);
+        const hoursSinceRide = (now.getTime() - rideDateTime.getTime()) / (1000 * 60 * 60);
+        return hoursSinceRide >= 2; // Complete if 2+ hours past ride time
+      });
+
+      if (expiredRides.length === 0) return;
+
+      try {
+        for (const ride of expiredRides) {
+          await updateDoc(doc(db, 'rides', ride.id), {
+            status: 'completed',
+            completedAt: new Date().toISOString(),
+            autoCompleted: true
+          });
+        }
+
+        if (expiredRides.length > 0) {
+          console.log(`Auto-completed ${expiredRides.length} expired rides`);
+          fetchRides(); // Refresh the ride list
+        }
+      } catch (error) {
+        console.error('Error auto-completing rides:', error);
+      }
+    };
+
+    if (activeRides.length > 0) {
+      autoCompleteExpiredRides();
+    }
+  }, [activeRides, userData]);
 
   const fetchRides = async () => {
     if (!userData) return;
@@ -93,21 +166,76 @@ export const ActivityPage: React.FC = () => {
     if (!userData) return;
 
     try {
+      // Find the ride to get driver info
+      const ride = completedRides.find(r => r.id === rideId);
+      if (!ride) {
+        toast.error('Ride not found');
+        return;
+      }
+
+      // Determine who to rate (if you're rider, rate driver; if you're driver, you'd need to select which rider)
+      let toUserID: string;
+      let toUserName: string;
+
+      if (userData.role === 'rider') {
+        // Rider rates the driver
+        toUserID = ride.driverID;
+        toUserName = ride.driverName;
+      } else {
+        // For drivers rating riders, you need UI to select which rider to rate
+        // For now, we'll just show an error - this needs a proper UI update
+        toast.error('Please select which passenger to rate from the ride details');
+        return;
+      }
+
+      // Generate rating ID matching backend pattern
+      const ratingID = `rating_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
+
       const ratingData = {
-        rideId,
-        ratedBy: userData.uid,
-        raterName: userData.name,
+        ratingID,
+        rideID: rideId,
+        fromUserID: userData.uid,
+        fromUserName: userData.name,
+        toUserID,
+        toUserName,
         rating,
-        review,
+        comment: review,
+        rideDate: ride.date,
+        rideRoute: `${ride.pickup} → ${ride.destination}`,
         createdAt: new Date().toISOString(),
       };
 
-      await setDoc(doc(collection(db, 'ratings')), ratingData);
+      // Use the ratingID as document ID to match backend pattern
+      await setDoc(doc(db, 'ratings', ratingID), ratingData);
+
+      // Update the rated user's rating statistics
+      const toUserRef = doc(db, 'users', toUserID);
+      const toUserQuery = query(collection(db, 'users'), where('uid', '==', toUserID));
+      const toUserSnapshot = await getDocs(toUserQuery);
+
+      if (!toUserSnapshot.empty) {
+        const toUserData = toUserSnapshot.docs[0].data();
+        const currentAvgRating = toUserData.avgRating || 0;
+        const currentRatingsCount = toUserData.ratingsCount || 0;
+
+        const newRatingsCount = currentRatingsCount + 1;
+        const newAvgRating = ((currentAvgRating * currentRatingsCount) + rating) / newRatingsCount;
+
+        await updateDoc(toUserRef, {
+          avgRating: parseFloat(newAvgRating.toFixed(2)),
+          ratingsCount: newRatingsCount,
+          updatedAt: new Date().toISOString()
+        });
+      }
 
       toast.success('Rating submitted successfully!');
       setRatingRide(null);
       setRating(5);
       setReview('');
+
+      // Close the rating prompt modal if open
+      setShowRatingPrompt(false);
+      setPendingRatingRide(null);
     } catch (error) {
       console.error('Error submitting rating:', error);
       toast.error('Failed to submit rating. Please try again.');
@@ -150,7 +278,7 @@ export const ActivityPage: React.FC = () => {
   const handleCancelRide = async () => {
     if (!selectedRide) return;
     if (!confirm('Are you sure you want to cancel this ride?')) return;
-    
+
     try {
       await updateDoc(doc(db, 'rides', selectedRide.id), {
         status: 'cancelled'
@@ -161,6 +289,93 @@ export const ActivityPage: React.FC = () => {
     } catch (error) {
       console.error('Error cancelling ride:', error);
       toast.error('Failed to cancel ride');
+    }
+  };
+
+  const handleCancelBooking = async (rideId: string) => {
+    if (!userData) return;
+    if (!confirm('Are you sure you want to cancel this booking? You must cancel at least 2 hours before the ride.')) return;
+
+    try {
+      // Find the ride to get details
+      const ride = activeRides.find(r => r.id === rideId);
+      if (!ride) {
+        toast.error('Ride not found');
+        return;
+      }
+
+      // Check 2-hour cancellation window
+      const rideDateTime = new Date(`${ride.date} ${ride.time}`);
+      const now = new Date();
+      const hoursUntilRide = (rideDateTime.getTime() - now.getTime()) / (1000 * 60 * 60);
+
+      if (hoursUntilRide < 2) {
+        toast.error('Cancellations must be made at least 2 hours before ride time');
+        return;
+      }
+
+      // Find the booking for this user and ride
+      const bookingsRef = collection(db, 'bookings');
+      const bookingQuery = query(
+        bookingsRef,
+        where('rideID', '==', rideId),
+        where('riderID', '==', userData.uid),
+        where('status', '==', 'active')
+      );
+      const bookingSnapshot = await getDocs(bookingQuery);
+
+      if (bookingSnapshot.empty) {
+        toast.error('No active booking found for this ride');
+        return;
+      }
+
+      const bookingDoc = bookingSnapshot.docs[0];
+      const bookingData = bookingDoc.data();
+
+      // Update booking status to cancelled
+      await updateDoc(doc(db, 'bookings', bookingDoc.id), {
+        status: 'cancelled',
+        cancelledAt: new Date().toISOString(),
+        updatedAt: new Date().toISOString()
+      });
+
+      // Update ride: return seats and remove rider
+      const rideRef = doc(db, 'rides', rideId);
+      const rideDoc = await getDocs(query(collection(db, 'rides'), where('__name__', '==', rideId)));
+
+      if (!rideDoc.empty) {
+        const currentRideData = rideDoc.docs[0].data();
+        const newSeatsAvailable = (currentRideData.seatsAvailable || 0) + (bookingData.seatsBooked || 1);
+        const updatedPassengers = (currentRideData.passengers || []).filter((p: any) => p.uid !== userData.uid);
+        const newStatus = currentRideData.status === 'full' ? 'active' : currentRideData.status;
+
+        await updateDoc(rideRef, {
+          seatsAvailable: newSeatsAvailable,
+          passengers: updatedPassengers,
+          status: newStatus,
+          updatedAt: new Date().toISOString()
+        });
+      }
+
+      // Update user's total rides taken count
+      const userRef = doc(db, 'users', userData.uid);
+      const userDoc = await getDocs(query(collection(db, 'users'), where('uid', '==', userData.uid)));
+
+      if (!userDoc.empty) {
+        const currentUserData = userDoc.docs[0].data();
+        const newTotalRidesTaken = Math.max(0, (currentUserData.totalRidesTaken || 0) - 1);
+
+        await updateDoc(userRef, {
+          totalRidesTaken: newTotalRidesTaken,
+          updatedAt: new Date().toISOString()
+        });
+      }
+
+      toast.success('Booking cancelled successfully!');
+      fetchRides();
+    } catch (error) {
+      console.error('Error cancelling booking:', error);
+      toast.error('Failed to cancel booking. Please try again.');
     }
   };
 
@@ -237,6 +452,18 @@ export const ActivityPage: React.FC = () => {
           >
             <Edit className="w-5 h-5" />
             Manage
+          </motion.button>
+        )}
+
+        {!isCompleted && userData?.role === 'rider' && (
+          <motion.button
+            onClick={() => handleCancelBooking(ride.id)}
+            className="flex-1 flex items-center justify-center gap-2 py-3 bg-gradient-to-r from-red-500 to-rose-500 text-white font-semibold rounded-lg"
+            whileHover={{ scale: 1.02 }}
+            whileTap={{ scale: 0.98 }}
+          >
+            <XCircle className="w-5 h-5" />
+            Cancel Booking
           </motion.button>
         )}
 
@@ -535,6 +762,136 @@ export const ActivityPage: React.FC = () => {
                   </motion.button>
                 </div>
               )}
+            </motion.div>
+          </motion.div>
+        )}
+      </AnimatePresence>
+
+      {/* Rating Prompt Modal */}
+      <AnimatePresence>
+        {showRatingPrompt && pendingRatingRide && (
+          <motion.div
+            className="fixed inset-0 bg-black/70 backdrop-blur-sm flex items-center justify-center z-50 px-4"
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            exit={{ opacity: 0 }}
+          >
+            <motion.div
+              className="backdrop-blur-xl bg-gradient-to-br from-blue-900/90 to-purple-900/90 border border-cyan-400/50 rounded-2xl p-8 max-w-lg w-full shadow-2xl"
+              initial={{ scale: 0.8, opacity: 0, y: 50 }}
+              animate={{ scale: 1, opacity: 1, y: 0 }}
+              exit={{ scale: 0.8, opacity: 0, y: 50 }}
+              transition={{ type: 'spring', duration: 0.5 }}
+            >
+              {/* Header */}
+              <div className="text-center mb-6">
+                <div className="inline-flex items-center justify-center w-16 h-16 bg-gradient-to-r from-yellow-400 to-orange-500 rounded-full mb-4">
+                  <Star className="w-8 h-8 text-white fill-white" />
+                </div>
+                <h2 className="text-3xl font-bold text-white mb-2">Rate Your Ride!</h2>
+                <p className="text-cyan-200">How was your recent trip?</p>
+              </div>
+
+              {/* Ride Info */}
+              <div className="bg-white/10 border border-cyan-400/30 rounded-xl p-4 mb-6">
+                <div className="flex items-start gap-2 mb-3">
+                  <MapPin className="w-5 h-5 text-cyan-400 flex-shrink-0 mt-0.5" />
+                  <div className="flex-1">
+                    <p className="text-cyan-300 text-sm">Route</p>
+                    <p className="text-white font-medium">
+                      {pendingRatingRide.pickup} → {pendingRatingRide.destination}
+                    </p>
+                  </div>
+                </div>
+                <div className="flex items-center gap-4 text-cyan-300 text-sm">
+                  <div className="flex items-center gap-1">
+                    <Calendar className="w-4 h-4" />
+                    <span>{pendingRatingRide.date}</span>
+                  </div>
+                  <div className="flex items-center gap-1">
+                    <Clock className="w-4 h-4" />
+                    <span>{pendingRatingRide.time}</span>
+                  </div>
+                </div>
+              </div>
+
+              {/* Rating Stars */}
+              <div className="mb-6">
+                <label className="block text-white font-semibold mb-3 text-center">
+                  Tap to rate your experience
+                </label>
+                <div className="flex justify-center gap-2">
+                  {[1, 2, 3, 4, 5].map((star) => (
+                    <motion.button
+                      key={star}
+                      type="button"
+                      onClick={() => setRating(star)}
+                      className="focus:outline-none"
+                      whileHover={{ scale: 1.2 }}
+                      whileTap={{ scale: 0.9 }}
+                    >
+                      <Star
+                        className={`w-12 h-12 transition-all ${
+                          star <= rating
+                            ? 'text-yellow-400 fill-yellow-400 drop-shadow-lg'
+                            : 'text-gray-400 hover:text-yellow-300'
+                        }`}
+                      />
+                    </motion.button>
+                  ))}
+                </div>
+                <p className="text-center text-cyan-300 text-sm mt-2">
+                  {rating === 5 && '⭐ Excellent!'}
+                  {rating === 4 && '😊 Great'}
+                  {rating === 3 && '👍 Good'}
+                  {rating === 2 && '😐 Okay'}
+                  {rating === 1 && '😞 Poor'}
+                </p>
+              </div>
+
+              {/* Review (Optional) */}
+              <div className="mb-6">
+                <label className="block text-white font-semibold mb-2">
+                  Comments <span className="text-cyan-300 text-sm font-normal">(Optional)</span>
+                </label>
+                <textarea
+                  value={review}
+                  onChange={(e) => setReview(e.target.value)}
+                  className="w-full px-4 py-3 bg-white/10 border border-cyan-400/30 rounded-lg text-white placeholder-cyan-300/50 focus:outline-none focus:border-cyan-400 focus:bg-white/15 resize-none transition"
+                  rows={3}
+                  placeholder="Share your experience..."
+                />
+              </div>
+
+              {/* Action Buttons */}
+              <div className="flex gap-3">
+                <motion.button
+                  onClick={() => handleSubmitRating(pendingRatingRide.id)}
+                  className="flex-1 py-3 bg-gradient-to-r from-green-500 to-emerald-500 text-white font-bold rounded-lg shadow-lg"
+                  whileHover={{ scale: 1.02, boxShadow: '0 10px 40px rgba(16, 185, 129, 0.4)' }}
+                  whileTap={{ scale: 0.98 }}
+                >
+                  Submit Rating
+                </motion.button>
+                <motion.button
+                  onClick={() => {
+                    setShowRatingPrompt(false);
+                    setPendingRatingRide(null);
+                    setRating(5);
+                    setReview('');
+                  }}
+                  className="px-6 py-3 bg-white/10 border border-cyan-400/30 text-cyan-300 font-semibold rounded-lg"
+                  whileHover={{ scale: 1.02, backgroundColor: 'rgba(255, 255, 255, 0.15)' }}
+                  whileTap={{ scale: 0.98 }}
+                >
+                  Skip
+                </motion.button>
+              </div>
+
+              {/* Note */}
+              <p className="text-center text-cyan-300/70 text-xs mt-4">
+                💡 Your feedback helps build a safer community
+              </p>
             </motion.div>
           </motion.div>
         )}
