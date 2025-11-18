@@ -89,12 +89,15 @@ if (position.coords.speed !== null && position.coords.speed !== undefined) {
       },
       (error) => {
         console.error('Geolocation error:', error);
-        toastError('Location tracking error');
+        // Only show error if tracking is still active
+        if (tracking) {
+          toastError('Location tracking error');
+        }
       },
-      { 
-        enableHighAccuracy: true, 
-        maximumAge: 5000, 
-        timeout: 10000 
+      {
+        enableHighAccuracy: true,
+        maximumAge: 10000,
+        timeout: 30000
       }
     );
 

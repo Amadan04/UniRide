@@ -61,12 +61,16 @@ export const ProfilePage: React.FC = () => {
     // Validate file type
     if (!file.type.startsWith('image/')) {
       toast.error('Please select an image file');
+      // Reset input
+      e.target.value = '';
       return;
     }
 
     // Validate file size (max 5MB)
     if (file.size > 5 * 1024 * 1024) {
       toast.error('Image size must be less than 5MB');
+      // Reset input
+      e.target.value = '';
       return;
     }
 
@@ -75,18 +79,21 @@ export const ProfilePage: React.FC = () => {
       const storageRef = ref(storage, `avatars/${userData.uid}`);
       await uploadBytes(storageRef, file);
       const url = await getDownloadURL(storageRef);
-      
+
       await updateDoc(doc(db, 'users', userData.uid), {
-        profileImage: url
+        profileImage: url,
+        updatedAt: new Date().toISOString()
       });
-      
+
       await refreshUserData();
       toast.success('Avatar updated successfully!');
-    } catch (error) {
+    } catch (error: any) {
       console.error('Error uploading avatar:', error);
-      toast.error('Failed to upload avatar. Please try again.');
+      toast.error(error?.message || 'Failed to upload avatar. Please try again.');
     } finally {
       setUploading(false);
+      // Reset input to allow re-uploading the same file if needed
+      e.target.value = '';
     }
   };
 

@@ -48,7 +48,8 @@ export const ActivityPage: React.FC = () => {
   // Check for pending ratings when completed rides load
   useEffect(() => {
     const checkPendingRatings = async () => {
-      if (!userData || completedRides.length === 0) return;
+      // Only show rating prompt for riders (passengers), not drivers
+      if (!userData || completedRides.length === 0 || userData.role !== 'rider') return;
 
       // Find rides that haven't been rated yet
       const unratedRides = [];
@@ -236,6 +237,9 @@ export const ActivityPage: React.FC = () => {
       // Close the rating prompt modal if open
       setShowRatingPrompt(false);
       setPendingRatingRide(null);
+
+      // Refresh rides to update any displayed ratings
+      await fetchRides();
     } catch (error) {
       console.error('Error submitting rating:', error);
       toast.error('Failed to submit rating. Please try again.');
