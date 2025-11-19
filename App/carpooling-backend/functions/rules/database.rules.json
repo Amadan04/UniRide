@@ -51,7 +51,7 @@
         "$messageID": {
           ".write": "auth != null",
           ".validate": "newData.hasChildren(['senderID', 'text', 'timestamp']) && 
-                       newData.child('text').isString() && 
+                       newData.child('text').isString() &&
                        newData.child('text').val().length > 0 && 
                        newData.child('text').val().length <= 1000",
           "senderID": {

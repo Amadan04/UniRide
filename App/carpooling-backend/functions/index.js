@@ -71,8 +71,11 @@ const sendPushNotification = async (fcmToken, title, body, data = {}) => {
  * Configure email transporter using Nodemailer
  * Replace with your SMTP credentials
  */
-const emailTransporter = nodemailer.createTransporter({
-  service: 'gmail', // or your email service
+// Email transporter configuration
+// Gmail with App Password (2FA enabled)
+// NOTE: Email notifications require Firebase Blaze plan (Cloud Functions)
+const emailTransporter = nodemailer.createTransport({
+  service: 'gmail',
   auth: {
     user: functions.config().email.user || 'your-email@gmail.com',
     pass: functions.config().email.password || 'your-app-password'

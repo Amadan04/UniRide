@@ -3,6 +3,10 @@
  * 
  * This file initializes Firebase services for the carpooling app.
  * Make sure to replace the config values with your actual Firebase project credentials.
+ * 
+ * 
+ * Need to add the keys to .env fiel to hide them ether thn having them hardcoded here or in another files throught the project..
+ * 
  */
 
 import { initializeApp } from 'firebase/app';
