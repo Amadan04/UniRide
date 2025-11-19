@@ -2,13 +2,11 @@
   "rules": {
     ".read": false,
     ".write": false,
-    
-    "rideLocations": {
-      "$rideID": {
+
+    "locations": {
+      "$userID": {
         ".read": "auth != null",
-        ".write": "auth != null && (
-          root.child('rides').child($rideID).child('driverID').val() == auth.uid
-        )",
+        ".write": "auth != null && auth.uid == $userID",
         ".validate": "newData.hasChildren(['lat', 'lng', 'timestamp'])",
         "lat": {
           ".validate": "newData.isNumber() && newData.val() >= -90 && newData.val() <= 90"
@@ -24,6 +22,25 @@
         },
         "timestamp": {
           ".validate": "newData.isNumber()"
+        }
+      }
+    },
+
+    "typing": {
+      "$rideID": {
+        ".read": "auth != null",
+        "$userID": {
+          ".write": "auth != null && auth.uid == $userID",
+          ".validate": "newData.hasChildren(['isTyping', 'userName'])",
+          "isTyping": {
+            ".validate": "newData.isBoolean()"
+          },
+          "userName": {
+            ".validate": "newData.isString()"
+          },
+          "timestamp": {
+            ".validate": "newData.isNumber()"
+          }
         }
       }
     },

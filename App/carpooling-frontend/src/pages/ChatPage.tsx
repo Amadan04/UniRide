@@ -38,6 +38,8 @@ export const ChatPage: React.FC = () => {
   const [rideInfo, setRideInfo] = useState<RideInfo | null>(null);
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const [showPassengerModal, setShowPassengerModal] = useState(false);
+  const [typingUsers, setTypingUsers] = useState<{ [key: string]: string }>({});
+  const typingTimeoutRef = useRef<NodeJS.Timeout | null>(null);
 
   // 🔹 Load ride info + live chat listener
   useEffect(() => {
@@ -69,6 +71,40 @@ export const ChatPage: React.FC = () => {
     return () => unsubscribe();
   }, [rideID, userData]);
 
+  // 🔹 Listen for typing indicators
+  useEffect(() => {
+    if (!rideID || !userData) return;
+
+    const typingRef = ref(rtdb, `typing/${rideID}`);
+    const unsubscribe = onValue(typingRef, (snapshot) => {
+      const data = snapshot.val();
+      if (data) {
+        // Filter out own typing status and inactive typers
+        const activeTypers: { [key: string]: string } = {};
+        Object.entries(data).forEach(([uid, info]: [string, any]) => {
+          if (uid !== userData.uid && info.isTyping && info.userName) {
+            activeTypers[uid] = info.userName;
+          }
+        });
+        setTypingUsers(activeTypers);
+      } else {
+        setTypingUsers({});
+      }
+    });
+
+    return () => unsubscribe();
+  }, [rideID, userData]);
+
+  // 🔹 Cleanup typing status on unmount
+  useEffect(() => {
+    return () => {
+      if (rideID && userData) {
+        const userTypingRef = ref(rtdb, `typing/${rideID}/${userData.uid}`);
+        set(userTypingRef, { isTyping: false, userName: userData.name });
+      }
+    };
+  }, [rideID, userData]);
+
   // 🔹 Auto-scroll to bottom on new message
   useEffect(() => {
     messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
@@ -87,6 +123,33 @@ export const ChatPage: React.FC = () => {
     }
   };
 
+  // 🔹 Handle typing indicator
+  const handleTyping = () => {
+    if (!rideID || !userData) return;
+
+    const userTypingRef = ref(rtdb, `typing/${rideID}/${userData.uid}`);
+
+    // Set typing to true
+    set(userTypingRef, {
+      isTyping: true,
+      userName: userData.name,
+      timestamp: Date.now()
+    });
+
+    // Clear existing timeout
+    if (typingTimeoutRef.current) {
+      clearTimeout(typingTimeoutRef.current);
+    }
+
+    // Set new timeout to clear typing status after 3 seconds
+    typingTimeoutRef.current = setTimeout(() => {
+      set(userTypingRef, {
+        isTyping: false,
+        userName: userData.name
+      });
+    }, 3000);
+  };
+
   // 🔹 Send a new message
   const handleSendMessage = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -99,6 +162,14 @@ export const ChatPage: React.FC = () => {
     }
 
     try {
+      // Clear typing indicator
+      const userTypingRef = ref(rtdb, `typing/${rideID}/${userData.uid}`);
+      await set(userTypingRef, {
+        isTyping: false,
+        userName: userData.name
+      });
+
+      // Send message
       const messagesRef = ref(rtdb, `chats/${rideID}`);
       const newMessageRef = push(messagesRef);
 
@@ -214,6 +285,34 @@ export const ChatPage: React.FC = () => {
               );
             })}
           </AnimatePresence>
+
+          {/* 🔹 Typing Indicator */}
+          <AnimatePresence>
+            {Object.keys(typingUsers).length > 0 && (
+              <motion.div
+                className="flex justify-start"
+                initial={{ opacity: 0, y: 10 }}
+                animate={{ opacity: 1, y: 0 }}
+                exit={{ opacity: 0, y: 10 }}
+              >
+                <div className="max-w-xs md:max-w-md px-4 py-3 rounded-2xl bg-white/10 backdrop-blur-xl border border-cyan-400/30">
+                  <p className="text-cyan-300 text-sm italic">
+                    {Object.values(typingUsers).length === 1
+                      ? `${Object.values(typingUsers)[0]} is typing`
+                      : Object.values(typingUsers).length === 2
+                      ? `${Object.values(typingUsers).join(' and ')} are typing`
+                      : `${Object.values(typingUsers).length} people are typing`}
+                    <span className="typing-dots">
+                      <span className="dot">.</span>
+                      <span className="dot">.</span>
+                      <span className="dot">.</span>
+                    </span>
+                  </p>
+                </div>
+              </motion.div>
+            )}
+          </AnimatePresence>
+
           <div ref={messagesEndRef} />
         </div>
       </div>
@@ -227,7 +326,16 @@ export const ChatPage: React.FC = () => {
           <input
             type="text"
             value={newMessage}
-            onChange={(e) => setNewMessage(e.target.value)}
+            onChange={(e) => {
+              setNewMessage(e.target.value);
+              handleTyping();
+            }}
+            onBlur={() => {
+              if (rideID && userData) {
+                const userTypingRef = ref(rtdb, `typing/${rideID}/${userData.uid}`);
+                set(userTypingRef, { isTyping: false, userName: userData.name });
+              }
+            }}
             placeholder="Type your message..."
             className="flex-1 px-4 py-3 bg-white/5 border border-cyan-400/30 rounded-full text-white placeholder-cyan-300/50 focus:outline-none focus:border-cyan-400 transition"
             maxLength={1000}

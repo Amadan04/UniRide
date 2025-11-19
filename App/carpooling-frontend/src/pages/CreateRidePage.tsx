@@ -1,13 +1,14 @@
 import React, { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { motion } from 'framer-motion';
-import { MapPin, Calendar, Clock, Users, DollarSign, ArrowLeft } from 'lucide-react';
+import { MapPin, Calendar, Clock, Users, DollarSign, ArrowLeft, MapPinned } from 'lucide-react';
 import { collection, addDoc, serverTimestamp } from 'firebase/firestore';
 import { useAuth } from '../context/AuthContext';
 import { pageTransition, scaleIn } from '../animations/motionVariants';
 import confetti from 'canvas-confetti';
 import { auth, db } from "../firebase";
 import { useToast } from '../context/ToastContext';
+import { LocationPicker } from '../components/LocationPicker';
 
 
 export const CreateRidePage: React.FC = () => {
@@ -15,9 +16,15 @@ export const CreateRidePage: React.FC = () => {
   const navigate = useNavigate();
   const [loading, setLoading] = useState(false);
   const toast = useToast();
+  const [showPickupPicker, setShowPickupPicker] = useState(false);
+  const [showDestinationPicker, setShowDestinationPicker] = useState(false);
   const [formData, setFormData] = useState({
     pickup: '',
+    pickupLat: 0,
+    pickupLng: 0,
     destination: '',
+    destinationLat: 0,
+    destinationLng: 0,
     date: '',
     time: '',
     totalSeats: '',
@@ -32,9 +39,16 @@ export const CreateRidePage: React.FC = () => {
     const rideData = {
       driverID: userData?.uid,                 // ✅ matches rule exactly
       driverName: userData?.name,
-      driverRating: userData?.rating || 5.0,
+      driverRating: userData?.avgRating || 5.0,
+      driverGender: userData?.gender || 'not-specified',
+      driverUniversity: userData?.university || 'Unknown',
+      driverAge: userData?.age || 0,
       pickup: formData.pickup,
+      pickupLat: formData.pickupLat,
+      pickupLng: formData.pickupLng,
       destination: formData.destination,
+      destinationLat: formData.destinationLat,
+      destinationLng: formData.destinationLng,
       date: formData.date,
       time: formData.time,
       totalSeats: parseInt(formData.totalSeats),
@@ -96,33 +110,57 @@ export const CreateRidePage: React.FC = () => {
             <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
               <div>
                 <label className="block text-cyan-300 mb-2 text-sm font-medium">Pickup Location</label>
-                <div className="relative">
-                  <MapPin className="absolute left-3 top-1/2 -translate-y-1/2 w-5 h-5 text-cyan-400" />
-                  <input
-                    type="text"
-                    name="pickup"
-                    value={formData.pickup}
-                    onChange={handleChange}
-                    required
-                    className="w-full pl-12 pr-4 py-3 bg-white/5 border border-cyan-400/30 rounded-lg text-white placeholder-cyan-300/50 focus:outline-none focus:border-cyan-400 transition"
-                    placeholder="Enter pickup location"
-                  />
+                <div className="relative flex gap-2">
+                  <div className="flex-1 relative">
+                    <MapPin className="absolute left-3 top-1/2 -translate-y-1/2 w-5 h-5 text-cyan-400" />
+                    <input
+                      type="text"
+                      name="pickup"
+                      value={formData.pickup}
+                      onChange={handleChange}
+                      required
+                      className="w-full pl-12 pr-4 py-3 bg-white/5 border border-cyan-400/30 rounded-lg text-white placeholder-cyan-300/50 focus:outline-none focus:border-cyan-400 transition"
+                      placeholder="Enter pickup location"
+                    />
+                  </div>
+                  <motion.button
+                    type="button"
+                    onClick={() => setShowPickupPicker(true)}
+                    className="px-4 py-3 bg-gradient-to-r from-purple-500 to-pink-500 text-white rounded-lg hover:shadow-lg hover:shadow-purple-500/50 transition flex items-center gap-2"
+                    whileHover={{ scale: 1.05 }}
+                    whileTap={{ scale: 0.95 }}
+                    title="Pick location on map"
+                  >
+                    <MapPinned className="w-5 h-5" />
+                  </motion.button>
                 </div>
               </div>
 
               <div>
                 <label className="block text-cyan-300 mb-2 text-sm font-medium">Destination</label>
-                <div className="relative">
-                  <MapPin className="absolute left-3 top-1/2 -translate-y-1/2 w-5 h-5 text-cyan-400" />
-                  <input
-                    type="text"
-                    name="destination"
-                    value={formData.destination}
-                    onChange={handleChange}
-                    required
-                    className="w-full pl-12 pr-4 py-3 bg-white/5 border border-cyan-400/30 rounded-lg text-white placeholder-cyan-300/50 focus:outline-none focus:border-cyan-400 transition"
-                    placeholder="Enter destination"
-                  />
+                <div className="relative flex gap-2">
+                  <div className="flex-1 relative">
+                    <MapPin className="absolute left-3 top-1/2 -translate-y-1/2 w-5 h-5 text-cyan-400" />
+                    <input
+                      type="text"
+                      name="destination"
+                      value={formData.destination}
+                      onChange={handleChange}
+                      required
+                      className="w-full pl-12 pr-4 py-3 bg-white/5 border border-cyan-400/30 rounded-lg text-white placeholder-cyan-300/50 focus:outline-none focus:border-cyan-400 transition"
+                      placeholder="Enter destination"
+                    />
+                  </div>
+                  <motion.button
+                    type="button"
+                    onClick={() => setShowDestinationPicker(true)}
+                    className="px-4 py-3 bg-gradient-to-r from-purple-500 to-pink-500 text-white rounded-lg hover:shadow-lg hover:shadow-purple-500/50 transition flex items-center gap-2"
+                    whileHover={{ scale: 1.05 }}
+                    whileTap={{ scale: 0.95 }}
+                    title="Pick location on map"
+                  >
+                    <MapPinned className="w-5 h-5" />
+                  </motion.button>
                 </div>
               </div>
 
@@ -206,6 +244,47 @@ export const CreateRidePage: React.FC = () => {
           </form>
         </motion.div>
       </div>
+
+      {/* Location Pickers */}
+      <LocationPicker
+        isOpen={showPickupPicker}
+        onClose={() => setShowPickupPicker(false)}
+        onSelect={(location) => {
+          setFormData({
+            ...formData,
+            pickup: location.address,
+            pickupLat: location.lat,
+            pickupLng: location.lng,
+          });
+          setShowPickupPicker(false);
+        }}
+        title="Select Pickup Location"
+        initialLocation={formData.pickupLat && formData.pickupLng ? {
+          address: formData.pickup,
+          lat: formData.pickupLat,
+          lng: formData.pickupLng,
+        } : undefined}
+      />
+
+      <LocationPicker
+        isOpen={showDestinationPicker}
+        onClose={() => setShowDestinationPicker(false)}
+        onSelect={(location) => {
+          setFormData({
+            ...formData,
+            destination: location.address,
+            destinationLat: location.lat,
+            destinationLng: location.lng,
+          });
+          setShowDestinationPicker(false);
+        }}
+        title="Select Destination"
+        initialLocation={formData.destinationLat && formData.destinationLng ? {
+          address: formData.destination,
+          lat: formData.destinationLat,
+          lng: formData.destinationLng,
+        } : undefined}
+      />
     </motion.div>
   );
 };

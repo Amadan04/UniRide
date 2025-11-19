@@ -177,9 +177,9 @@ export const ProfilePage: React.FC = () => {
 
           <div className="flex items-center justify-center gap-2 mb-8">
             <Star className="w-6 h-6 text-yellow-400 fill-yellow-400" />
-            <span className="text-2xl font-bold text-white">{userData.rating?.toFixed(1) || '5.0'}</span>
+            <span className="text-2xl font-bold text-white">{userData.avgRating?.toFixed(1) || '5.0'}</span>
             <span className="text-cyan-300">
-              ({userData.totalRatings || 0} ratings)
+              ({userData.ratingsCount || 0} ratings)
             </span>
           </div>
 

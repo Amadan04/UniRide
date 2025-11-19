@@ -14,6 +14,9 @@ interface Ride {
   driverID: string;
   driverName: string;
   driverRating: number;
+  driverGender?: string;
+  driverUniversity?: string;
+  driverAge?: number;
   pickup: string;
   destination: string;
   date: string;
@@ -39,6 +42,10 @@ export const JoinRidePage: React.FC = () => {
     destination: '',
     date: '',
     maxCost: '',
+    gender: '',
+    university: '',
+    minRating: '',
+    minSeats: '',
   });
 
   useEffect(() => {
@@ -106,6 +113,28 @@ export const JoinRidePage: React.FC = () => {
     if (filters.maxCost) {
       filtered = filtered.filter((ride) => ride.cost <= parseFloat(filters.maxCost));
       console.log('After cost filter:', filtered.length);
+    }
+
+    if (filters.gender) {
+      filtered = filtered.filter((ride) => ride.driverGender === filters.gender);
+      console.log('After gender filter:', filtered.length);
+    }
+
+    if (filters.university) {
+      filtered = filtered.filter((ride) =>
+        ride.driverUniversity?.toLowerCase().includes(filters.university.toLowerCase())
+      );
+      console.log('After university filter:', filtered.length);
+    }
+
+    if (filters.minRating) {
+      filtered = filtered.filter((ride) => ride.driverRating >= parseFloat(filters.minRating));
+      console.log('After rating filter:', filtered.length);
+    }
+
+    if (filters.minSeats) {
+      filtered = filtered.filter((ride) => ride.seatsAvailable >= parseInt(filters.minSeats));
+      console.log('After seats filter:', filtered.length);
     }
 
     console.log('Final filtered rides:', filtered.length);
@@ -217,28 +246,160 @@ export const JoinRidePage: React.FC = () => {
             animate={{ opacity: 1, height: 'auto' }}
             exit={{ opacity: 0, height: 0 }}
           >
-            <h3 className="text-xl font-bold text-white mb-4">Filter Rides</h3>
-            <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-              <input
-                type="text"
-                placeholder="Destination"
-                value={filters.destination}
-                onChange={(e) => setFilters({ ...filters, destination: e.target.value })}
-                className="px-4 py-2 bg-white/5 border border-cyan-400/30 rounded-lg text-white placeholder-cyan-300/50 focus:outline-none focus:border-cyan-400"
-              />
-              <input
-                type="date"
-                value={filters.date}
-                onChange={(e) => setFilters({ ...filters, date: e.target.value })}
-                className="px-4 py-2 bg-white/5 border border-cyan-400/30 rounded-lg text-white focus:outline-none focus:border-cyan-400"
-              />
-              <input
-                type="number"
-                placeholder="Max Cost"
-                value={filters.maxCost}
-                onChange={(e) => setFilters({ ...filters, maxCost: e.target.value })}
-                className="px-4 py-2 bg-white/5 border border-cyan-400/30 rounded-lg text-white placeholder-cyan-300/50 focus:outline-none focus:border-cyan-400"
-              />
+            <div className="flex items-center justify-between mb-4">
+              <h3 className="text-xl font-bold text-white">Filter Rides</h3>
+              <button
+                onClick={() => setFilters({
+                  destination: '',
+                  date: '',
+                  maxCost: '',
+                  gender: '',
+                  university: '',
+                  minRating: '',
+                  minSeats: '',
+                })}
+                className="text-cyan-400 hover:text-cyan-300 text-sm font-medium transition"
+              >
+                Clear All
+              </button>
+            </div>
+
+            <div className="space-y-4">
+              {/* Row 1: Location & Date */}
+              <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                <div>
+                  <label className="block text-cyan-300 text-sm mb-2">Destination</label>
+                  <input
+                    type="text"
+                    placeholder="Search destination..."
+                    value={filters.destination}
+                    onChange={(e) => setFilters({ ...filters, destination: e.target.value })}
+                    className="w-full px-4 py-2 bg-white/5 border border-cyan-400/30 rounded-lg text-white placeholder-cyan-300/50 focus:outline-none focus:border-cyan-400"
+                  />
+                </div>
+                <div>
+                  <label className="block text-cyan-300 text-sm mb-2">Date</label>
+                  <input
+                    type="date"
+                    value={filters.date}
+                    onChange={(e) => setFilters({ ...filters, date: e.target.value })}
+                    className="w-full px-4 py-2 bg-white/5 border border-cyan-400/30 rounded-lg text-white focus:outline-none focus:border-cyan-400"
+                  />
+                </div>
+                <div>
+                  <label className="block text-cyan-300 text-sm mb-2">Max Cost ($)</label>
+                  <input
+                    type="number"
+                    placeholder="Any"
+                    value={filters.maxCost}
+                    onChange={(e) => setFilters({ ...filters, maxCost: e.target.value })}
+                    className="w-full px-4 py-2 bg-white/5 border border-cyan-400/30 rounded-lg text-white placeholder-cyan-300/50 focus:outline-none focus:border-cyan-400"
+                  />
+                </div>
+              </div>
+
+              {/* Row 2: Driver Preferences */}
+              <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                <div>
+                  <label className="block text-cyan-300 text-sm mb-2">Driver Gender</label>
+                  <select
+                    value={filters.gender}
+                    onChange={(e) => setFilters({ ...filters, gender: e.target.value })}
+                    className="w-full px-4 py-2 bg-white/5 border border-cyan-400/30 rounded-lg text-white focus:outline-none focus:border-cyan-400"
+                  >
+                    <option value="" className="bg-slate-900">Any</option>
+                    <option value="male" className="bg-slate-900">Male</option>
+                    <option value="female" className="bg-slate-900">Female</option>
+                    <option value="other" className="bg-slate-900">Other</option>
+                  </select>
+                </div>
+                <div>
+                  <label className="block text-cyan-300 text-sm mb-2">University</label>
+                  <input
+                    type="text"
+                    placeholder="Search university..."
+                    value={filters.university}
+                    onChange={(e) => setFilters({ ...filters, university: e.target.value })}
+                    className="w-full px-4 py-2 bg-white/5 border border-cyan-400/30 rounded-lg text-white placeholder-cyan-300/50 focus:outline-none focus:border-cyan-400"
+                  />
+                </div>
+                <div>
+                  <label className="block text-cyan-300 text-sm mb-2">Min Rating</label>
+                  <select
+                    value={filters.minRating}
+                    onChange={(e) => setFilters({ ...filters, minRating: e.target.value })}
+                    className="w-full px-4 py-2 bg-white/5 border border-cyan-400/30 rounded-lg text-white focus:outline-none focus:border-cyan-400"
+                  >
+                    <option value="" className="bg-slate-900">Any</option>
+                    <option value="4.5" className="bg-slate-900">4.5+ ⭐</option>
+                    <option value="4.0" className="bg-slate-900">4.0+ ⭐</option>
+                    <option value="3.5" className="bg-slate-900">3.5+ ⭐</option>
+                    <option value="3.0" className="bg-slate-900">3.0+ ⭐</option>
+                  </select>
+                </div>
+              </div>
+
+              {/* Row 3: Additional Options */}
+              <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                <div>
+                  <label className="block text-cyan-300 text-sm mb-2">Min Seats Available</label>
+                  <select
+                    value={filters.minSeats}
+                    onChange={(e) => setFilters({ ...filters, minSeats: e.target.value })}
+                    className="w-full px-4 py-2 bg-white/5 border border-cyan-400/30 rounded-lg text-white focus:outline-none focus:border-cyan-400"
+                  >
+                    <option value="" className="bg-slate-900">Any</option>
+                    <option value="1" className="bg-slate-900">1+ seat</option>
+                    <option value="2" className="bg-slate-900">2+ seats</option>
+                    <option value="3" className="bg-slate-900">3+ seats</option>
+                    <option value="4" className="bg-slate-900">4+ seats</option>
+                  </select>
+                </div>
+              </div>
+
+              {/* Active Filters Display */}
+              {(filters.destination || filters.date || filters.maxCost || filters.gender || filters.university || filters.minRating || filters.minSeats) && (
+                <div className="pt-4 border-t border-cyan-400/20">
+                  <p className="text-cyan-300 text-sm mb-2">Active Filters:</p>
+                  <div className="flex flex-wrap gap-2">
+                    {filters.destination && (
+                      <span className="px-3 py-1 bg-cyan-500/20 border border-cyan-400/30 rounded-full text-cyan-300 text-xs">
+                        To: {filters.destination}
+                      </span>
+                    )}
+                    {filters.date && (
+                      <span className="px-3 py-1 bg-cyan-500/20 border border-cyan-400/30 rounded-full text-cyan-300 text-xs">
+                        Date: {filters.date}
+                      </span>
+                    )}
+                    {filters.maxCost && (
+                      <span className="px-3 py-1 bg-cyan-500/20 border border-cyan-400/30 rounded-full text-cyan-300 text-xs">
+                        Max: ${filters.maxCost}
+                      </span>
+                    )}
+                    {filters.gender && (
+                      <span className="px-3 py-1 bg-cyan-500/20 border border-cyan-400/30 rounded-full text-cyan-300 text-xs capitalize">
+                        Gender: {filters.gender}
+                      </span>
+                    )}
+                    {filters.university && (
+                      <span className="px-3 py-1 bg-cyan-500/20 border border-cyan-400/30 rounded-full text-cyan-300 text-xs">
+                        Uni: {filters.university}
+                      </span>
+                    )}
+                    {filters.minRating && (
+                      <span className="px-3 py-1 bg-cyan-500/20 border border-cyan-400/30 rounded-full text-cyan-300 text-xs">
+                        Rating: {filters.minRating}+
+                      </span>
+                    )}
+                    {filters.minSeats && (
+                      <span className="px-3 py-1 bg-cyan-500/20 border border-cyan-400/30 rounded-full text-cyan-300 text-xs">
+                        Seats: {filters.minSeats}+
+                      </span>
+                    )}
+                  </div>
+                </div>
+              )}
             </div>
           </motion.div>
         )}
@@ -272,10 +433,22 @@ export const JoinRidePage: React.FC = () => {
                 <div className="flex items-center justify-between mb-4">
                   <div>
                     <h3 className="text-xl font-bold text-white">{ride.driverName}</h3>
-                    <div className="flex items-center gap-1 mt-1">
-                      <Star className="w-4 h-4 text-yellow-400 fill-yellow-400" />
-                      <span className="text-cyan-300 text-sm">{ride.driverRating.toFixed(1)}</span>
+                    <div className="flex items-center gap-3 mt-1">
+                      <div className="flex items-center gap-1">
+                        <Star className="w-4 h-4 text-yellow-400 fill-yellow-400" />
+                        <span className="text-cyan-300 text-sm">{ride.driverRating.toFixed(1)}</span>
+                      </div>
+                      {ride.driverGender && (
+                        <span className="text-cyan-300/70 text-xs capitalize">
+                          {ride.driverGender === 'male' ? '♂' : ride.driverGender === 'female' ? '♀' : '⚧'} {ride.driverGender}
+                        </span>
+                      )}
                     </div>
+                    {ride.driverUniversity && (
+                      <p className="text-cyan-300/70 text-xs mt-1 truncate max-w-[200px]">
+                        🎓 {ride.driverUniversity}
+                      </p>
+                    )}
                   </div>
                   <div className="text-2xl font-bold text-cyan-400">${ride.cost}</div>
                 </div>

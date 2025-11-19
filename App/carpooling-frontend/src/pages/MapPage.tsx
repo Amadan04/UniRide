@@ -33,6 +33,7 @@ export const MapPage: React.FC = () => {
   const [driverLocation, setDriverLocation] = useState<Location | null>(null);
   const [rideInfo, setRideInfo] = useState<RideInfo | null>(null);
   const [tracking, setTracking] = useState(false);
+  const [requestingPermission, setRequestingPermission] = useState(false);
   const { success: toastSuccess, error: toastError } = useToast();
 
   // Fetch ride info to get driverID
@@ -124,12 +125,58 @@ if (position.coords.speed !== null && position.coords.speed !== undefined) {
     }
   };
 
-  const handleStartTracking = () => {
-    if (navigator.geolocation) {
+  const handleStartTracking = async () => {
+    if (!navigator.geolocation) {
+      toastError('Geolocation is not supported by your browser');
+      return;
+    }
+
+    setRequestingPermission(true);
+    try {
+      // First, explicitly request permission by getting current position
+      // This triggers the permission dialog on mobile devices
+      await new Promise<void>((resolve, reject) => {
+        navigator.geolocation.getCurrentPosition(
+          (position) => {
+            // Successfully got permission and initial position
+            console.log('Location permission granted:', position.coords);
+            resolve();
+          },
+          (error) => {
+            console.error('Location permission error:', error);
+
+            // Provide specific error messages
+            switch (error.code) {
+              case error.PERMISSION_DENIED:
+                toastError('Location permission denied. Please enable location access in your browser settings.');
+                break;
+              case error.POSITION_UNAVAILABLE:
+                toastError('Location information unavailable. Please check your device settings.');
+                break;
+              case error.TIMEOUT:
+                toastError('Location request timed out. Please try again.');
+                break;
+              default:
+                toastError('Unable to get location. Please check your settings.');
+            }
+            reject(error);
+          },
+          {
+            enableHighAccuracy: true,
+            maximumAge: 10000,
+            timeout: 30000
+          }
+        );
+      });
+
+      // If we get here, permission was granted
       setTracking(true);
       toastSuccess('Location tracking started');
-    } else {
-      toastError('Geolocation is not supported by your browser');
+    } catch (error) {
+      console.error('Failed to start tracking:', error);
+      // Error toast already shown in the geolocation error handler
+    } finally {
+      setRequestingPermission(false);
     }
   };
 
@@ -165,16 +212,17 @@ if (position.coords.speed !== null && position.coords.speed !== undefined) {
           {userData?.role === 'driver' && (
             <motion.button
               onClick={tracking ? handleStopTracking : handleStartTracking}
+              disabled={requestingPermission}
               className={`flex items-center gap-2 px-4 py-2 rounded-lg font-semibold ${
                 tracking
                   ? 'bg-green-500/20 border border-green-400/30 text-green-400'
                   : 'bg-cyan-500/20 border border-cyan-400/30 text-cyan-400 hover:bg-cyan-500/30'
-              } transition`}
-              whileHover={{ scale: 1.05 }}
-              whileTap={{ scale: 0.95 }}
+              } transition disabled:opacity-50 disabled:cursor-not-allowed`}
+              whileHover={{ scale: requestingPermission ? 1 : 1.05 }}
+              whileTap={{ scale: requestingPermission ? 1 : 0.95 }}
             >
-              <Navigation className="w-5 h-5" />
-              {tracking ? 'Tracking Active' : 'Start Tracking'}
+              <Navigation className={`w-5 h-5 ${requestingPermission ? 'animate-spin' : ''}`} />
+              {requestingPermission ? 'Requesting Permission...' : tracking ? 'Tracking Active' : 'Start Tracking'}
             </motion.button>
           )}
         </div>
