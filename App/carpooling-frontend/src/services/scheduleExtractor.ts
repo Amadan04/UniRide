@@ -209,7 +209,15 @@ export async function extractScheduleFromImage(
     }
 
     const data = await response.json();
-    const jsonResponse = data.choices[0]?.message?.content || '{}';
+    let jsonResponse = data.choices[0]?.message?.content || '{}';
+
+    // Remove markdown code blocks if present
+    jsonResponse = jsonResponse.trim();
+    if (jsonResponse.startsWith('```json')) {
+      jsonResponse = jsonResponse.replace(/```json\n?/g, '').replace(/```\n?$/g, '');
+    } else if (jsonResponse.startsWith('```')) {
+      jsonResponse = jsonResponse.replace(/```\n?/g, '');
+    }
 
     // Parse the JSON response
     const schedule = JSON.parse(jsonResponse.trim());
@@ -264,7 +272,15 @@ export async function processScheduleEdits(
     }
 
     const data = await response.json();
-    const jsonResponse = data.choices[0]?.message?.content || '{}';
+    let jsonResponse = data.choices[0]?.message?.content || '{}';
+
+    // Remove markdown code blocks if present
+    jsonResponse = jsonResponse.trim();
+    if (jsonResponse.startsWith('```json')) {
+      jsonResponse = jsonResponse.replace(/```json\n?/g, '').replace(/```\n?$/g, '');
+    } else if (jsonResponse.startsWith('```')) {
+      jsonResponse = jsonResponse.replace(/```\n?/g, '');
+    }
 
     // Parse the JSON response
     const schedule = JSON.parse(jsonResponse.trim());

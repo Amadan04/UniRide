@@ -3,10 +3,11 @@ import { useNavigate } from 'react-router-dom';
 import { collection, query, where, getDocs, doc, updateDoc, arrayUnion, addDoc } from 'firebase/firestore';
 import { db } from '../firebase';
 import { useAuth } from '../context/AuthContext';
-import { MapPin, Calendar, Clock, Users, DollarSign, Star, ArrowLeft, Filter, X } from 'lucide-react';
+import { MapPin, Calendar, Clock, Users, DollarSign, Star, ArrowLeft, Filter, X, AlertCircle } from 'lucide-react';
 import { pageTransition, scaleIn } from '../animations/motionVariants';
 import { useToast } from '../context/ToastContext';
 import { motion, AnimatePresence } from 'framer-motion';
+import { checkRideConflict } from '../services/scheduleExtractor';
 
 
 interface Ride {
@@ -422,7 +423,34 @@ export const JoinRidePage: React.FC = () => {
           </motion.div>
         ) : (
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-            {filteredRides.map((ride, index) => (
+            {filteredRides.map((ride, index) => {
+              // Get day name from date (e.g., "2025-11-20" -> "wednesday")
+              const rideDate = new Date(ride.date);
+              const dayName = rideDate.toLocaleDateString('en-US', { weekday: 'long' }).toLowerCase();
+
+              // Check schedule conflict
+              const classSchedule = userData?.classSchedule || {};
+              const conflictStatus = checkRideConflict(ride.time, dayName, classSchedule);
+
+              // Get tag info
+              const getTagInfo = () => {
+                switch (conflictStatus) {
+                  case 'conflicts':
+                    return { label: 'Conflicts With Class', color: 'bg-red-500/20 border-red-500 text-red-300', icon: '🔴' };
+                  case 'close':
+                    return { label: 'Close to Class Time', color: 'bg-yellow-500/20 border-yellow-500 text-yellow-300', icon: '🟡' };
+                  case 'between':
+                    return { label: 'Between Classes', color: 'bg-yellow-500/20 border-yellow-500 text-yellow-300', icon: '🟡' };
+                  case 'after':
+                    return { label: 'After Classes', color: 'bg-green-500/20 border-green-500 text-green-300', icon: '🟢' };
+                  default:
+                    return null;
+                }
+              };
+
+              const tagInfo = getTagInfo();
+
+              return (
               <motion.div
                 key={ride.id}
                 className="backdrop-blur-xl bg-white/10 border border-cyan-400/30 rounded-2xl p-6 hover:border-cyan-400 transition"
@@ -430,6 +458,14 @@ export const JoinRidePage: React.FC = () => {
                 animate={{ opacity: 1, y: 0 }}
                 transition={{ delay: index * 0.1, duration: 0.3 }}
               >
+                {/* Schedule Tag */}
+                {tagInfo && (
+                  <div className={`mb-3 px-3 py-1.5 rounded-lg border text-xs font-medium flex items-center gap-2 ${tagInfo.color}`}>
+                    <span>{tagInfo.icon}</span>
+                    <span>{tagInfo.label}</span>
+                  </div>
+                )}
+
                 <div className="flex items-center justify-between mb-4">
                   <div>
                     <h3 className="text-xl font-bold text-white">{ride.driverName}</h3>
@@ -508,7 +544,8 @@ export const JoinRidePage: React.FC = () => {
                   {ride.seatsAvailable <= 0 ? 'Ride Full' : 'Join Ride'}
                 </motion.button>
               </motion.div>
-            ))}
+            );
+            })}
           </div>
         )}
       </div>

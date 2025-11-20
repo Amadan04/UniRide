@@ -10,7 +10,7 @@ import {
   WeeklySchedule,
   ClassBlock
 } from '../services/scheduleExtractor';
-import { doc, updateDoc } from 'firebase/firestore';
+import { doc, updateDoc, collection, query, where, getDocs } from 'firebase/firestore';
 import { db } from '../firebase';
 
 export const ClassSchedulePage: React.FC = () => {
@@ -80,16 +80,28 @@ export const ClassSchedulePage: React.FC = () => {
     setIsSaving(true);
 
     try {
-      const userRef = doc(db, 'users', currentUser.uid);
-      await updateDoc(userRef, {
+      // Find the user document by querying with uid field
+      const usersQuery = query(collection(db, 'users'), where('uid', '==', currentUser.uid));
+      const usersSnapshot = await getDocs(usersQuery);
+
+      if (usersSnapshot.empty) {
+        alert('User profile not found. Please make sure you are logged in.');
+        return;
+      }
+
+      // Update the first matching document
+      const userDocRef = usersSnapshot.docs[0].ref;
+      await updateDoc(userDocRef, {
         classSchedule: schedule
       });
 
       setSaveSuccess(true);
       setTimeout(() => setSaveSuccess(false), 3000);
+
+      console.log('Schedule saved successfully!');
     } catch (error) {
       console.error('Save error:', error);
-      alert('Failed to save schedule');
+      alert('Failed to save schedule: ' + (error as Error).message);
     } finally {
       setIsSaving(false);
     }

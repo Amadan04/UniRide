@@ -59,21 +59,33 @@ export const AIAssistantPage: React.FC = () => {
       }));
 
       // Filter and sort in JavaScript
+      const now = Date.now();
+
       const upcomingRides = allRides
-        .filter((ride: any) => ['active', 'scheduled'].includes(ride.status))
+        .filter((ride: any) => {
+          const rideTime = ride.rideDateTime?.toMillis?.() || 0;
+          // Only include rides that are in the future and have active/scheduled status
+          return ['active', 'scheduled'].includes(ride.status) && rideTime > now;
+        })
         .sort((a: any, b: any) => {
           const aTime = a.rideDateTime?.toMillis?.() || 0;
           const bTime = b.rideDateTime?.toMillis?.() || 0;
           return aTime - bTime;
-        });
+        })
+        .slice(0, 10); // Limit to 10 upcoming rides
 
       const pastRides = allRides
-        .filter((ride: any) => ride.status === 'completed')
+        .filter((ride: any) => {
+          const rideTime = ride.rideDateTime?.toMillis?.() || 0;
+          // Include completed rides OR rides that have passed
+          return ride.status === 'completed' || rideTime <= now;
+        })
         .sort((a: any, b: any) => {
           const aTime = a.rideDateTime?.toMillis?.() || 0;
           const bTime = b.rideDateTime?.toMillis?.() || 0;
           return bTime - aTime;
-        });
+        })
+        .slice(0, 10); // Limit to 10 past rides
 
       // Load active bookings
       const bookingsQuery = query(
@@ -86,7 +98,18 @@ export const AIAssistantPage: React.FC = () => {
           id: doc.id,
           ...doc.data()
         }))
-        .filter((booking: any) => booking.status === 'active');
+        .filter((booking: any) => {
+          // Parse the date string (format: YYYY-MM-DD)
+          const bookingDate = new Date(booking.date);
+          const today = new Date();
+          today.setHours(0, 0, 0, 0); // Reset time to start of day
+
+          // Only include bookings that are:
+          // 1. Status is 'active'
+          // 2. Date is today or in the future
+          return booking.status === 'active' && bookingDate >= today;
+        })
+        .slice(0, 10); // Limit to 10 active bookings
 
       // Load user profile from userData context (faster)
       const userProfile = userData;

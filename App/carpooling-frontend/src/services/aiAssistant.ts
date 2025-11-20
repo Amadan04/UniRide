@@ -114,37 +114,56 @@ const APP_INFO = `<app_info>
  * Build user context from app data
  */
 function buildUserContext(context: UserContext): string {
+  const userRole = context.userProfile?.role || 'user';
+  const isDriver = userRole === 'driver';
+  const isRider = userRole === 'rider';
+
   return `<user_data>
-## Upcoming Rides
+## User Profile
+- Name: ${context.userProfile?.name || 'User'}
+- Email: ${context.userProfile?.email || 'Not available'}
+- Role: ${userRole.toUpperCase()} ${isDriver ? '(Creates and offers rides to others)' : '(Books rides from drivers)'}
+- Average Rating: ${context.userProfile?.avgRating || 'No ratings yet'}
+- Total Rides: ${(context.upcomingRides.length || 0) + (context.pastRides.length || 0)}
+
+${isDriver ? `## Upcoming Rides (As Driver - Rides I'm Offering)` : `## Upcoming Rides (As Driver)`}
 ${context.upcomingRides.length > 0
   ? context.upcomingRides.map(ride => `
 - ${ride.pickup} → ${ride.destination}
   Date: ${ride.date} at ${ride.time}
   Status: ${ride.status}
-  Seats: ${ride.seatsBooked || ride.seatsAvailable}
-  Cost: $${ride.cost}
+  Available Seats: ${ride.seatsAvailable}
+  Cost per Seat: $${ride.cost}
+  ${isDriver ? '(I am driving this ride)' : ''}
 `).join('\n')
-  : 'No upcoming rides scheduled.'}
+  : isDriver ? 'No rides currently offered.' : 'No rides created.'}
 
-## Past Rides
+${isDriver ? `## Past Rides (As Driver)` : `## Past Rides`}
 ${context.pastRides.length > 0
-  ? `Total completed rides: ${context.pastRides.length}`
+  ? `Total completed rides as driver: ${context.pastRides.length}`
   : 'No past rides yet.'}
 
-## Active Bookings
+${isRider ? `## Active Bookings (As Rider - Rides I've Booked)` : `## Active Bookings (As Rider)`}
 ${context.activeBookings.length > 0
   ? context.activeBookings.map(booking => `
 - ${booking.pickup} → ${booking.destination}
   Date: ${booking.date}
   Status: ${booking.status}
+  Seats Booked: ${booking.seatsBooked}
+  ${isRider ? '(I am a passenger on this ride)' : ''}
 `).join('\n')
-  : 'No active bookings.'}
+  : isRider ? 'No active bookings. Browse available rides to book one!' : 'No bookings.'}
 
-## User Profile
-- Name: ${context.userProfile?.name || 'User'}
-- Email: ${context.userProfile?.email || 'Not available'}
-- Average Rating: ${context.userProfile?.avgRating || 'No ratings yet'}
-- Total Rides: ${(context.upcomingRides.length || 0) + (context.pastRides.length || 0)}
+## Important Notes
+${isDriver ? `
+- You are a DRIVER, so you CREATE rides and offer them to riders.
+- When the user asks about "my rides", they mean rides they are DRIVING.
+- When the user asks about "bookings", they mean riders who booked their rides.
+` : `
+- You are a RIDER, so you BOOK rides from drivers.
+- When the user asks about "my rides", they mean rides they have BOOKED as a passenger.
+- You cannot create rides - only drivers can do that.
+`}
 </user_data>`;
 }
 
