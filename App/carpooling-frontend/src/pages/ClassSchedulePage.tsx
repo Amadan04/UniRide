@@ -121,39 +121,40 @@ export const ClassSchedulePage: React.FC = () => {
         animate={{ y: 0 }}
         className="bg-gray-900/50 backdrop-blur-lg border-b border-cyan-500/20 sticky top-0 z-50"
       >
-        <div className="max-w-6xl mx-auto px-4 py-4 flex items-center justify-between">
-          <div className="flex items-center gap-4">
+        <div className="max-w-6xl mx-auto px-4 py-4 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3 sm:gap-4">
+          <div className="flex items-center gap-2 sm:gap-4 w-full sm:w-auto">
             <button
               onClick={() => navigate(-1)}
-              className="p-2 hover:bg-cyan-500/10 rounded-lg transition-colors"
+              className="p-2 hover:bg-cyan-500/10 rounded-lg transition-colors flex-shrink-0"
             >
-              <ArrowLeft className="w-6 h-6 text-cyan-400" />
+              <ArrowLeft className="w-5 h-5 sm:w-6 sm:h-6 text-cyan-400" />
             </button>
-            <div className="flex items-center gap-3">
-              <Calendar className="w-8 h-8 text-cyan-400" />
-              <h1 className="text-2xl font-bold text-white">My Class Schedule</h1>
+            <div className="flex items-center gap-2 sm:gap-3">
+              <Calendar className="w-6 h-6 sm:w-8 sm:h-8 text-cyan-400 flex-shrink-0" />
+              <h1 className="text-lg sm:text-2xl font-bold text-white truncate">My Class Schedule</h1>
             </div>
           </div>
 
-          <div className="flex items-center gap-3">
+          <div className="flex items-center gap-2 sm:gap-3">
             <button
               onClick={handleClearSchedule}
-              className="px-4 py-2 bg-red-500/20 text-red-400 rounded-lg hover:bg-red-500/30 transition-colors flex items-center gap-2"
+              className="px-3 sm:px-4 py-2 bg-red-500/20 text-red-400 rounded-lg hover:bg-red-500/30 transition-colors flex items-center gap-1 sm:gap-2 text-sm sm:text-base"
             >
               <Trash2 className="w-4 h-4" />
-              Clear All
+              <span className="hidden xs:inline">Clear All</span>
+              <span className="xs:hidden">Clear</span>
             </button>
             <button
               onClick={handleSaveSchedule}
               disabled={isSaving}
-              className="px-6 py-2 bg-gradient-to-r from-cyan-500 to-blue-500 text-white rounded-lg hover:shadow-lg hover:shadow-cyan-500/50 transition-all disabled:opacity-50 flex items-center gap-2"
+              className="px-4 sm:px-6 py-2 bg-gradient-to-r from-cyan-500 to-blue-500 text-white rounded-lg hover:shadow-lg hover:shadow-cyan-500/50 transition-all disabled:opacity-50 flex items-center gap-1 sm:gap-2 text-sm sm:text-base whitespace-nowrap"
             >
               {isSaving ? (
                 <Loader2 className="w-4 h-4 animate-spin" />
               ) : saveSuccess ? (
                 <Check className="w-4 h-4" />
               ) : null}
-              {isSaving ? 'Saving...' : saveSuccess ? 'Saved!' : 'Save Schedule'}
+              {isSaving ? 'Saving...' : saveSuccess ? 'Saved!' : 'Save'}
             </button>
           </div>
         </div>
