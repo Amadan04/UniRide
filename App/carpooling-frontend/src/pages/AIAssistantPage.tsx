@@ -14,7 +14,7 @@ import { db } from '../firebase';
 
 export const AIAssistantPage: React.FC = () => {
   const navigate = useNavigate();
-  const { currentUser } = useAuth();
+  const { currentUser, userData } = useAuth();
   const [messages, setMessages] = useState<Message[]>([
     {
       id: generateMessageId(),
@@ -47,49 +47,49 @@ export const AIAssistantPage: React.FC = () => {
     if (!currentUser) return;
 
     try {
-      // Load upcoming rides
+      // Load upcoming rides (remove orderBy to avoid index requirement)
       const ridesQuery = query(
         collection(db, 'rides'),
-        where('driverID', '==', currentUser.uid),
-        where('status', 'in', ['active', 'scheduled']),
-        orderBy('rideDateTime', 'asc')
+        where('driverID', '==', currentUser.uid)
       );
       const ridesSnapshot = await getDocs(ridesQuery);
-      const upcomingRides = ridesSnapshot.docs.map(doc => ({
+      const allRides = ridesSnapshot.docs.map(doc => ({
         id: doc.id,
         ...doc.data()
       }));
 
-      // Load past rides
-      const pastRidesQuery = query(
-        collection(db, 'rides'),
-        where('driverID', '==', currentUser.uid),
-        where('status', '==', 'completed'),
-        orderBy('rideDateTime', 'desc')
-      );
-      const pastRidesSnapshot = await getDocs(pastRidesQuery);
-      const pastRides = pastRidesSnapshot.docs.map(doc => ({
-        id: doc.id,
-        ...doc.data()
-      }));
+      // Filter and sort in JavaScript
+      const upcomingRides = allRides
+        .filter((ride: any) => ['active', 'scheduled'].includes(ride.status))
+        .sort((a: any, b: any) => {
+          const aTime = a.rideDateTime?.toMillis?.() || 0;
+          const bTime = b.rideDateTime?.toMillis?.() || 0;
+          return aTime - bTime;
+        });
+
+      const pastRides = allRides
+        .filter((ride: any) => ride.status === 'completed')
+        .sort((a: any, b: any) => {
+          const aTime = a.rideDateTime?.toMillis?.() || 0;
+          const bTime = b.rideDateTime?.toMillis?.() || 0;
+          return bTime - aTime;
+        });
 
       // Load active bookings
       const bookingsQuery = query(
         collection(db, 'bookings'),
-        where('riderID', '==', currentUser.uid),
-        where('status', '==', 'active')
+        where('riderID', '==', currentUser.uid)
       );
       const bookingsSnapshot = await getDocs(bookingsQuery);
-      const activeBookings = bookingsSnapshot.docs.map(doc => ({
-        id: doc.id,
-        ...doc.data()
-      }));
+      const activeBookings = bookingsSnapshot.docs
+        .map(doc => ({
+          id: doc.id,
+          ...doc.data()
+        }))
+        .filter((booking: any) => booking.status === 'active');
 
-      // Load user profile
-      const userDoc = await getDocs(
-        query(collection(db, 'users'), where('uid', '==', currentUser.uid))
-      );
-      const userProfile = userDoc.docs[0]?.data();
+      // Load user profile from userData context (faster)
+      const userProfile = userData;
 
       setUserContext({
         upcomingRides,

@@ -14,6 +14,7 @@ import { ProfilePage } from './pages/ProfilePage';
 import { ActivityPage } from './pages/ActivityPage';
 import { MapPage } from './pages/MapPage';
 import { AIAssistantPage } from './pages/AIAssistantPage';
+import { ClassSchedulePage } from './pages/ClassSchedulePage';
 import { FloatingChatButton } from './components/FloatingChatButton';
 import { ToastProvider } from './context/ToastContext';
 
@@ -102,6 +103,15 @@ function App() {
                 element={
                   <ProtectedRoute>
                     <AIAssistantPage />
+                  </ProtectedRoute>
+                }
+              />
+
+              <Route
+                path="/schedule"
+                element={
+                  <ProtectedRoute>
+                    <ClassSchedulePage />
                   </ProtectedRoute>
                 }
               />
