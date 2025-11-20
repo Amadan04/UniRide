@@ -58,7 +58,7 @@ export const Sidebar: React.FC<SidebarProps> = ({ isOpen, onClose }) => {
               <div className="flex items-center justify-between mb-8">
                 <div className="flex items-center gap-3">
                   <Car className="w-8 h-8 text-cyan-400" />
-                  <h2 className="text-2xl font-bold text-white">UniCarpool</h2>
+                  <h2 className="text-2xl font-bold text-white">UniRide</h2>
                 </div>
                 <button
                   onClick={onClose}

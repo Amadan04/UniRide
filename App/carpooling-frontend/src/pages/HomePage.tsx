@@ -113,7 +113,7 @@ export const HomePage: React.FC = () => {
             ref={titleRef}
             className="text-6xl md:text-8xl font-bold text-transparent bg-clip-text bg-gradient-to-r from-cyan-400 to-blue-500 mb-4"
           >
-            UniCarpool
+            UniRide
           </h1>
           <p className="text-xl md:text-2xl text-cyan-300">
             {userData?.name ? `Welcome back, ${userData.name}!` : 'Ride Together, Save Together'}

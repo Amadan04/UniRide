@@ -19,7 +19,7 @@ export const AIAssistantPage: React.FC = () => {
     {
       id: generateMessageId(),
       role: 'assistant',
-      content: 'Hi! I\'m your UniCarpool assistant. I can help you with creating rides, checking your schedule, or answering questions about the app. How can I help you today?',
+      content: 'Hi! I\'m your UniRide assistant. I can help you with creating rides, checking your schedule, or answering questions about the app. How can I help you today?',
       timestamp: Date.now()
     }
   ]);
@@ -196,7 +196,7 @@ export const AIAssistantPage: React.FC = () => {
             </div>
             <div>
               <h1 className="text-xl font-bold text-white">AI Assistant</h1>
-              <p className="text-sm text-cyan-400">UniCarpool Helper</p>
+              <p className="text-sm text-cyan-400">UniRide Helper</p>
             </div>
           </div>
         </div>
@@ -289,7 +289,7 @@ export const AIAssistantPage: React.FC = () => {
             value={inputValue}
             onChange={(e) => setInputValue(e.target.value)}
             onKeyPress={handleKeyPress}
-            placeholder="Ask me anything about UniCarpool..."
+            placeholder="Ask me anything about UniRide..."
             className="flex-1 bg-gray-800 text-white rounded-full px-6 py-3 focus:outline-none focus:ring-2 focus:ring-cyan-500 placeholder-gray-400"
             disabled={isLoading}
           />

@@ -90,11 +90,20 @@ export const JoinRidePage: React.FC = () => {
       querySnapshot.forEach((docSnapshot) => {
         const data = docSnapshot.data();
         console.log('Found ride:', { id: docSnapshot.id, driverID: data.driverID, currentUser: userData?.uid });
-        if (data.driverID !== userData?.uid) {
-          ridesData.push({ id: docSnapshot.id, ...data } as Ride);
-        } else {
+
+        // Filter out rides where user is the driver
+        if (data.driverID === userData?.uid) {
           console.log('Filtered out ride because user is the driver');
+          return;
         }
+
+        // Filter out rides the user has already joined
+        if (data.passengers && Array.isArray(data.passengers) && data.passengers.some((p: any) => p.uid === userData?.uid)) {
+          console.log('Filtered out ride because user has already joined');
+          return;
+        }
+
+        ridesData.push({ id: docSnapshot.id, ...data } as Ride);
       });
 
       console.log('Total rides after filtering:', ridesData.length);

@@ -109,7 +109,7 @@ export const SplashScreen: React.FC<SplashScreenProps> = ({ onComplete }) => {
             textShadow: '0 0 40px rgba(34, 211, 238, 0.6)',
           }}
         >
-          UniCarpool
+          UniRide
         </motion.h1>
         <motion.p
           className="text-xl md:text-2xl text-cyan-300"

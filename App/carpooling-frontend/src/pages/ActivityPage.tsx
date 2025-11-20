@@ -186,6 +186,22 @@ export const ActivityPage: React.FC = () => {
     if (!userData) return;
 
     try {
+      // Check if user has already rated this ride
+      const existingRatingQuery = query(
+        collection(db, 'ratings'),
+        where('rideID', '==', rideId),
+        where('fromUserID', '==', userData.uid)
+      );
+      const existingRatingSnapshot = await getDocs(existingRatingQuery);
+
+      if (!existingRatingSnapshot.empty) {
+        toast.warning('You have already rated this ride!');
+        setRatingRide(null);
+        setShowRatingPrompt(false);
+        setPendingRatingRide(null);
+        return;
+      }
+
       // Find the ride to get driver info
       const ride = completedRides.find(r => r.id === rideId);
       if (!ride) {

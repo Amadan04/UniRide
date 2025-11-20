@@ -1,13 +1,34 @@
 import React, { useState, useRef, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { motion } from 'framer-motion';
-import { createUserWithEmailAndPassword, signInWithEmailAndPassword } from 'firebase/auth';
+import { createUserWithEmailAndPassword, signInWithEmailAndPassword, sendEmailVerification } from 'firebase/auth';
 import { auth, db } from '../firebase';
 import { Car, Mail, Lock, User, Calendar, Users, GraduationCap } from 'lucide-react';
 import { fadeInUp } from '../animations/gsapAnimations';
 import { pageTransition, scaleIn } from '../animations/motionVariants';
 import { doc, setDoc, serverTimestamp } from "firebase/firestore";
 import { useToast } from '../context/ToastContext';
+
+// Firebase error code to user-friendly message mapping
+const getFirebaseErrorMessage = (errorCode: string): string => {
+  const errorMessages: { [key: string]: string } = {
+    'auth/email-already-in-use': 'This email is already registered. Please sign in instead.',
+    'auth/invalid-email': 'Please enter a valid email address.',
+    'auth/operation-not-allowed': 'Email/password accounts are not enabled. Please contact support.',
+    'auth/weak-password': 'Password is too weak. Please use at least 8 characters with uppercase, lowercase, and numbers.',
+    'auth/user-disabled': 'This account has been disabled. Please contact support.',
+    'auth/user-not-found': 'No account found with this email. Please sign up first.',
+    'auth/wrong-password': 'Incorrect password. Please try again.',
+    'auth/invalid-credential': 'Invalid email or password. Please check your credentials.',
+    'auth/too-many-requests': 'Too many failed attempts. Please try again later.',
+    'auth/network-request-failed': 'Network error. Please check your internet connection.',
+    'auth/popup-closed-by-user': 'Sign-in cancelled. Please try again.',
+    'auth/cancelled-popup-request': 'Sign-in cancelled. Please try again.',
+    'auth/popup-blocked': 'Popup blocked by browser. Please allow popups for this site.',
+  };
+
+  return errorMessages[errorCode] || 'An unexpected error occurred. Please try again.';
+};
 
 export const AuthPage: React.FC = () => {
   const [isLogin, setIsLogin] = useState(true);
@@ -53,12 +74,32 @@ export const AuthPage: React.FC = () => {
   try {
     if (isLogin) {
       // 🔐 LOGIN
-      await signInWithEmailAndPassword(auth, formData.email, formData.password);
+      const { user } = await signInWithEmailAndPassword(auth, formData.email, formData.password);
+
+      // Check if email is verified
+      if (!user.emailVerified) {
+        await auth.signOut();
+        const friendlyError = 'Please verify your email before signing in. Check your inbox for the verification link.';
+        setError(friendlyError);
+        toast.error(friendlyError);
+        setLoading(false);
+        return;
+      }
+
       toast.success('Welcome back!');
       navigate('/');
     } else {
       // 🆕 SIGN UP
       const { user } = await createUserWithEmailAndPassword(auth, formData.email, formData.password);
+
+      // Send email verification
+      try {
+        await sendEmailVerification(user);
+        console.log("📧 Verification email sent to:", user.email);
+      } catch (emailErr) {
+        console.warn("⚠️ Failed to send verification email:", emailErr);
+        // Continue with account creation even if email fails
+      }
 
       // ✅ Firestore write with required fields
       await setDoc(doc(db, 'users', user.uid), {
@@ -74,14 +115,19 @@ export const AuthPage: React.FC = () => {
         createdAt: serverTimestamp(),         // cleaner Firestore timestamp
       });
 
+      // Sign out user until they verify email
+      await auth.signOut();
+
       console.log("✅ Firestore user created successfully");
-      toast.success('Account created successfully!');
-      navigate('/');
+      toast.success('Account created! Please check your email to verify your account before signing in.');
+      setError('Please verify your email before signing in. Check your inbox for the verification link.');
+      setIsLogin(true); // Switch to login mode
     }
   } catch (err: any) {
-    console.error("❌ Signup error:", err);
-  setError(err.message || 'An error occurred');
-  toast.error(err.message || 'Authentication failed');
+    console.error("❌ Auth error:", err);
+    const friendlyError = getFirebaseErrorMessage(err.code);
+    setError(friendlyError);
+    toast.error(friendlyError);
   } finally {
     setLoading(false);
   }
@@ -132,7 +178,7 @@ export const AuthPage: React.FC = () => {
           </div>
 
           <h2 className="text-3xl font-bold text-center text-white mb-2">
-            {isLogin ? 'Welcome Back' : 'Join UniCarpool'}
+            {isLogin ? 'Welcome Back' : 'Join UniRide'}
           </h2>
           <p className="text-cyan-300 text-center mb-6">
             {isLogin ? 'Sign in to continue' : 'Create your account'}
@@ -215,12 +261,18 @@ export const AuthPage: React.FC = () => {
                     value={formData.gender}
                     onChange={handleChange}
                     required
-                    className="w-full pl-12 pr-4 py-3 bg-white/5 border border-cyan-400/30 rounded-lg text-white focus:outline-none focus:border-cyan-400 transition"
+                    className="w-full pl-12 pr-4 py-3 bg-white/5 border border-cyan-400/30 rounded-lg text-white focus:outline-none focus:border-cyan-400 transition appearance-none cursor-pointer"
+                    style={{
+                      backgroundImage: 'url("data:image/svg+xml,%3Csvg xmlns=\'http://www.w3.org/2000/svg\' fill=\'none\' viewBox=\'0 0 20 20\'%3E%3Cpath stroke=\'%2367e8f9\' stroke-linecap=\'round\' stroke-linejoin=\'round\' stroke-width=\'1.5\' d=\'M6 8l4 4 4-4\'/%3E%3C/svg%3E")',
+                      backgroundPosition: 'right 0.5rem center',
+                      backgroundRepeat: 'no-repeat',
+                      backgroundSize: '1.5em 1.5em'
+                    }}
                   >
-                    <option value="">Select Gender</option>
-                    <option value="male">Male</option>
-                    <option value="female">Female</option>
-                    <option value="other">Other</option>
+                    <option value="" className="bg-slate-800 text-white">Select Gender</option>
+                    <option value="male" className="bg-slate-800 text-white">Male</option>
+                    <option value="female" className="bg-slate-800 text-white">Female</option>
+                    <option value="other" className="bg-slate-800 text-white">Other</option>
                   </select>
                 </div>
 
@@ -244,10 +296,16 @@ export const AuthPage: React.FC = () => {
                     value={formData.role}
                     onChange={handleChange}
                     required
-                    className="w-full pl-12 pr-4 py-3 bg-white/5 border border-cyan-400/30 rounded-lg text-white focus:outline-none focus:border-cyan-400 transition"
+                    className="w-full pl-12 pr-4 py-3 bg-white/5 border border-cyan-400/30 rounded-lg text-white focus:outline-none focus:border-cyan-400 transition appearance-none cursor-pointer"
+                    style={{
+                      backgroundImage: 'url("data:image/svg+xml,%3Csvg xmlns=\'http://www.w3.org/2000/svg\' fill=\'none\' viewBox=\'0 0 20 20\'%3E%3Cpath stroke=\'%2367e8f9\' stroke-linecap=\'round\' stroke-linejoin=\'round\' stroke-width=\'1.5\' d=\'M6 8l4 4 4-4\'/%3E%3C/svg%3E")',
+                      backgroundPosition: 'right 0.5rem center',
+                      backgroundRepeat: 'no-repeat',
+                      backgroundSize: '1.5em 1.5em'
+                    }}
                   >
-                    <option value="rider">Rider</option>
-                    <option value="driver">Driver</option>
+                    <option value="rider" className="bg-slate-800 text-white">Rider</option>
+                    <option value="driver" className="bg-slate-800 text-white">Driver</option>
                   </select>
                 </div>
               </>

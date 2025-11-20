@@ -21,7 +21,7 @@ export interface WeeklySchedule {
 const OPENROUTER_API_KEY = import.meta.env.VITE_OPENROUTER_API_KEY || '';
 const OPENROUTER_API_URL = 'https://openrouter.ai/api/v1/chat/completions';
 
-const SYSTEM_PROMPT = `You are the "Class Schedule Manager" for the UniCarpool app.
+const SYSTEM_PROMPT = `You are the "Class Schedule Manager" for the UniRide app.
 
 Your responsibilities:
 1. Extract class schedules from a user-uploaded timetable image.
@@ -174,7 +174,7 @@ export async function extractScheduleFromImage(
         'Authorization': `Bearer ${OPENROUTER_API_KEY}`,
         'Content-Type': 'application/json',
         'HTTP-Referer': window.location.origin,
-        'X-Title': 'UniCarpool Schedule Extractor'
+        'X-Title': 'UniRide Schedule Extractor'
       },
       body: JSON.stringify({
         model: 'openai/gpt-4o',
@@ -248,7 +248,7 @@ export async function processScheduleEdits(
         'Authorization': `Bearer ${OPENROUTER_API_KEY}`,
         'Content-Type': 'application/json',
         'HTTP-Referer': window.location.origin,
-        'X-Title': 'UniCarpool Schedule Editor'
+        'X-Title': 'UniRide Schedule Editor'
       },
       body: JSON.stringify({
         model: 'openai/gpt-4-turbo',

@@ -1,5 +1,5 @@
 /**
- * UniCarpool AI Assistant Service
+ * UniRide AI Assistant Service
  *
  * Integrates with OpenRouter API to provide in-app chat assistance
  * using GPT-4 with context-aware responses.
@@ -22,7 +22,7 @@ export interface UserContext {
 const OPENROUTER_API_KEY = import.meta.env.VITE_OPENROUTER_API_KEY || '';
 const OPENROUTER_API_URL = 'https://openrouter.ai/api/v1/chat/completions';
 
-const SYSTEM_PROMPT = `You are the UniCarpool AI Assistant — an in-app chatbot designed only to help the user navigate and use the UniCarpool application.
+const SYSTEM_PROMPT = `You are the UniRide AI Assistant — an in-app chatbot designed only to help the user navigate and use the UniRide application.
 
 You must strictly follow these rules:
 
@@ -35,7 +35,7 @@ You must strictly follow these rules:
      "I don't have this information in the app context."
 
 2. **App Purpose**
-   - UniCarpool is a ride-sharing app for university students.
+   - UniRide is a ride-sharing app for university students.
    - You can help users with:
      - Creating rides
      - Viewing ride history
@@ -66,46 +66,75 @@ You must strictly follow these rules:
 Always base your answer ONLY on <app_info> and <user_data>.`;
 
 const APP_INFO = `<app_info>
-# UniCarpool Features
+# UniRide Features
 
 ## Creating a Ride (Driver Mode)
 1. Tap "Create Ride" from the home page
 2. Enter pickup location, destination, date, and time
-3. Set number of available seats and cost per seat
-4. Add optional notes about your ride
-5. Tap "Create Ride" to publish
+3. **Multi-Pickup Support**: Add multiple pickup points along your route for flexible passenger pickup
+4. Set number of available seats and cost per seat
+5. Add optional notes about your ride
+6. Tap "Create Ride" to publish
 
 ## Joining a Ride (Rider Mode)
 1. Browse available rides on the home page
-2. Filter by destination, date, or price
-3. Tap on a ride to see details
-4. Select number of seats and tap "Book Now"
-5. Chat with driver before the ride
+2. **Choose Your Pickup Point**: Select from multiple pickup locations when available
+3. Filter by destination, date, or price
+4. Tap on a ride to see details
+5. Select number of seats and tap "Book Now"
+6. Chat with driver before the ride
+
+## Class Schedule Integration
+- Upload your class timetable image or add classes manually
+- System automatically tags rides with schedule compatibility:
+  - 🟢 **After Classes**: Ride is after all your classes
+  - 🟡 **Between Classes**: Ride is during a break
+  - 🟡 **Close to Class Time**: Ride is within 30 minutes of a class
+  - 🔴 **Conflicts With Class**: Ride overlaps with your class time
+- Helps you avoid booking rides during class hours
 
 ## Chat Feature
-- Real-time messaging with drivers/riders
+- Real-time messaging with drivers/riders in ride-specific chat rooms
 - Typing indicators show when someone is typing
 - Share ride details and coordinate pickup
+- System messages for important ride updates
 
-## Live Tracking
-- Track driver's location in real-time during the ride
-- See estimated arrival time
-- Get notified when driver is nearby
+## Live Tracking & Navigation
+- **Real-time driver location**: Track driver's current position during active rides
+- **Multi-stop routing**: Optimized route that visits all passenger pickup points
+- **Live map view**: Interactive map showing driver location and pickup points
+- **ETA updates**: See estimated arrival time for each pickup location
+- Access tracking from "/tracking" page during active rides
+
+## Carpool Score & Gamification System
+- **Earn Points**: Get carpool points for every completed ride
+  - Drivers: 15 points per ride + 5 points per passenger
+  - Riders: 10 points per ride
+- **Badge System**: Unlock achievement badges:
+  - 🏆 Road Warrior, Eco Champion, Social Butterfly, Rating Star, Early Bird
+  - Community Hero, Distance Master, Savings Champion, Perfect Streak, Night Owl
+- **Weekly Leaderboard**: Compete with other users, top 10 shown on leaderboard page
+- **Profile Stats**: View your total points, badges earned, and leaderboard rank
 
 ## Rating System
-- Rate drivers/riders after each completed ride
+- Rate drivers/riders after each completed ride (1-5 stars)
+- **One rating per ride**: You can only rate each ride once
 - View ratings on user profiles
-- Help maintain a safe community
+- Average rating displayed on profile and ride cards
+- Helps maintain a safe and reliable community
 
 ## Activity Page
 - View all your upcoming rides
 - See past ride history
 - Track active bookings
+- Rate completed rides
 - Cancel rides if needed
 
 ## Profile
-- View and edit your profile
-- See your average rating
+- View and edit your profile information
+- See your average rating and total ratings count
+- **View Carpool Score**: See your total points and current rank
+- **Badge Collection**: Display all unlocked badges
 - Manage your account settings
 - View ride statistics
 </app_info>`;
@@ -199,7 +228,7 @@ export async function sendMessage(
         'Authorization': `Bearer ${OPENROUTER_API_KEY}`,
         'Content-Type': 'application/json',
         'HTTP-Referer': window.location.origin,
-        'X-Title': 'UniCarpool'
+        'X-Title': 'UniRide'
       },
       body: JSON.stringify({
         model: 'openai/gpt-4-turbo',
