@@ -13,6 +13,8 @@ import { ChatPage } from './pages/ChatPage';
 import { ProfilePage } from './pages/ProfilePage';
 import { ActivityPage } from './pages/ActivityPage';
 import { MapPage } from './pages/MapPage';
+import { AIAssistantPage } from './pages/AIAssistantPage';
+import { FloatingChatButton } from './components/FloatingChatButton';
 import { ToastProvider } from './context/ToastContext';
 
 function App() {
@@ -27,6 +29,7 @@ function App() {
      <ThemeProvider>
       <AuthProvider>
         <Router>
+          <FloatingChatButton />
           <AnimatePresence mode="wait">
             <Routes>
               <Route path="/auth" element={<AuthPage />} />
@@ -90,6 +93,15 @@ function App() {
                 element={
                   <ProtectedRoute>
                     <MapPage />
+                  </ProtectedRoute>
+                }
+              />
+
+              <Route
+                path="/ai-assistant"
+                element={
+                  <ProtectedRoute>
+                    <AIAssistantPage />
                   </ProtectedRoute>
                 }
               />

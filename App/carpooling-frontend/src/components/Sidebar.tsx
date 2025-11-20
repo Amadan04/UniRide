@@ -1,7 +1,7 @@
 import React from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { Link, useNavigate } from 'react-router-dom';
-import { Home, Car, MessageSquare, User, Activity, Moon, Sun, LogOut, X } from 'lucide-react';
+import { Home, Car, MessageSquare, User, Activity, Moon, Sun, LogOut, X, Bot } from 'lucide-react';
 import { signOut } from 'firebase/auth';
 import { auth } from '../firebase';
 import { useAuth } from '../context/AuthContext';
@@ -30,6 +30,7 @@ export const Sidebar: React.FC<SidebarProps> = ({ isOpen, onClose }) => {
     { icon: Home, label: 'Home', path: '/' },
     { icon: Car, label: userData?.role === 'driver' ? 'Create Ride' : 'Join Ride', path: userData?.role === 'driver' ? '/ride-create' : '/rides' },
     { icon: Activity, label: 'Activity', path: '/activity' },
+    { icon: Bot, label: 'AI Assistant', path: '/ai-assistant' },
     { icon: User, label: 'Profile', path: '/profile' },
   ];
 
