@@ -1,0 +1,39 @@
+# =========================
+# 🚀 UniRide Backend - .gitignore
+# =========================
+
+# 🔹 Environment & Secrets
+.env
+.env.local
+.env.*.local
+*.env
+!.env.example
+
+# 🔹 Firebase Admin Keys
+firebase-admin-sdk.json
+serviceAccount*.json
+firebase-adminsdk*.json
+
+# 🔹 Node modules
+node_modules/
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+
+# 🔹 Functions build
+functions/lib/
+functions/node_modules/
+functions/.env
+
+# 🔹 Logs
+*.log
+logs/
+
+# 🔹 IDE
+.vscode/
+.idea/
+.DS_Store
+
+# =========================
+# ✅ End of .gitignore
+# =========================

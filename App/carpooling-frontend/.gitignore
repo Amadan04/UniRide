@@ -1,3 +1,32 @@
+# =========================
+# 🚀 UniRide Frontend - .gitignore
+# =========================
+
+# 🔹 Dependencies
+node_modules/
+.pnp
+.pnp.js
+
+# 🔹 Build outputs
+dist/
+dist-ssr/
+build/
+.cache/
+
+# 🔹 Environment variables & secrets
+.env
+.env.local
+.env.development.local
+.env.test.local
+.env.production.local
+.env.production
+*.env
+!.env.example
+
+# 🔹 Vite
+*.local
+
+# 🔹 Logs
 logs
 *.log
 npm-debug.log*
@@ -6,18 +35,26 @@ yarn-error.log*
 pnpm-debug.log*
 lerna-debug.log*
 
-node_modules
-dist
-dist-ssr
-*.local
-
+# 🔹 Editor directories and files
 .vscode/*
 !.vscode/extensions.json
 .idea
-.DS_Store
 *.suo
 *.ntvs*
 *.njsproj
 *.sln
 *.sw?
-.env
+.DS_Store
+
+# 🔹 Testing
+coverage/
+.nyc_output/
+
+# 🔹 Temporary files
+*.tmp
+*.temp
+.cache
+
+# =========================
+# ✅ End of .gitignore
+# =========================
