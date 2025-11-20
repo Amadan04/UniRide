@@ -15,6 +15,8 @@ import { ActivityPage } from './pages/ActivityPage';
 import { MapPage } from './pages/MapPage';
 import { AIAssistantPage } from './pages/AIAssistantPage';
 import { ClassSchedulePage } from './pages/ClassSchedulePage';
+import { LiveTrackingPage } from './pages/LiveTrackingPage';
+import { LiveTrackingDemoPage } from './pages/LiveTrackingDemoPage';
 import { FloatingChatButton } from './components/FloatingChatButton';
 import { ToastProvider } from './context/ToastContext';
 
@@ -112,6 +114,24 @@ function App() {
                 element={
                   <ProtectedRoute>
                     <ClassSchedulePage />
+                  </ProtectedRoute>
+                }
+              />
+
+              <Route
+                path="/tracking/:rideID"
+                element={
+                  <ProtectedRoute>
+                    <LiveTrackingPage />
+                  </ProtectedRoute>
+                }
+              />
+
+              <Route
+                path="/tracking-demo"
+                element={
+                  <ProtectedRoute>
+                    <LiveTrackingDemoPage />
                   </ProtectedRoute>
                 }
               />

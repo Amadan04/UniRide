@@ -8,7 +8,7 @@ import { useAuth } from '../context/AuthContext';
 import { ArrowLeft, Navigation, MapPin } from 'lucide-react';
 import { pageTransition } from '../animations/motionVariants';
 import { useToast } from '../context/ToastContext';
-import { LiveMap } from '../components/LiveMap';
+import { SimpleLiveMap } from '../components/SimpleLiveMap';
 
 interface Location {
   lat: number;
@@ -232,7 +232,7 @@ if (position.coords.speed !== null && position.coords.speed !== undefined) {
         <div className="max-w-6xl mx-auto">
           {driverLocation ? (
             <div className="space-y-4">
-              <LiveMap 
+              <SimpleLiveMap
                 driverLocation={driverLocation}
                 pickup={rideInfo?.pickup}
                 destination={rideInfo?.destination}
