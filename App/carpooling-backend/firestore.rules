@@ -37,7 +37,12 @@ service cloud.firestore {
                     // OR allow authenticated users to update rating fields only (for rating system)
                     || (isAuthenticated()
                         && request.resource.data.diff(resource.data).affectedKeys()
-                          .hasOnly(['avgRating', 'ratingsCount', 'updatedAt']));
+                          .hasOnly(['avgRating', 'ratingsCount', 'updatedAt']))
+
+                    // OR allow authenticated users to update stats field (for score system)
+                    || (isAuthenticated()
+                        && request.resource.data.diff(resource.data).affectedKeys()
+                          .hasOnly(['stats', 'updatedAt']));
       
       // Users cannot delete their profile (use Cloud Function for proper cleanup)
       allow delete: if false;
