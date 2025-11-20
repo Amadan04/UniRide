@@ -2,7 +2,7 @@ import React, { useState, useEffect, useRef } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { motion } from 'framer-motion';
 import { Canvas } from '@react-three/fiber';
-import { Menu, Car, Users } from 'lucide-react';
+import { Menu, Car, Users, Trophy } from 'lucide-react';
 import { Sidebar } from '../components/Sidebar';
 import { useAuth } from '../context/AuthContext';
 import { pageTransition, buttonHover, buttonTap } from '../animations/motionVariants';
@@ -169,6 +169,23 @@ export const HomePage: React.FC = () => {
             </motion.div>
             <h3 className="text-2xl font-bold text-white mb-2">My Activity</h3>
             <p className="text-purple-300">View your ride history</p>
+          </motion.button>
+
+          <motion.button
+            onClick={() => navigate('/leaderboard')}
+            className="group relative p-8 bg-gradient-to-br from-yellow-500/20 to-orange-500/20 backdrop-blur-xl border-2 border-yellow-400/30 rounded-2xl hover:border-yellow-400 transition overflow-hidden"
+            whileHover={buttonHover}
+            whileTap={buttonTap}
+          >
+            <div className="absolute inset-0 bg-gradient-to-r from-yellow-500/0 via-yellow-500/20 to-yellow-500/0 translate-x-[-100%] group-hover:translate-x-[100%] transition-transform duration-1000"></div>
+            <motion.div
+              animate={{ rotate: [0, 5, -5, 0], y: [0, -5, 0] }}
+              transition={{ duration: 3, repeat: Infinity }}
+            >
+              <Trophy className="w-16 h-16 text-yellow-400 mx-auto mb-4" />
+            </motion.div>
+            <h3 className="text-2xl font-bold text-white mb-2">Leaderboard</h3>
+            <p className="text-yellow-300">Top carpoolers this week</p>
           </motion.button>
         </motion.div>
 

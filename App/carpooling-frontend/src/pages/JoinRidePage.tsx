@@ -3,11 +3,12 @@ import { useNavigate } from 'react-router-dom';
 import { collection, query, where, getDocs, doc, updateDoc, arrayUnion, addDoc } from 'firebase/firestore';
 import { db } from '../firebase';
 import { useAuth } from '../context/AuthContext';
-import { MapPin, Calendar, Clock, Users, DollarSign, Star, ArrowLeft, Filter, X, AlertCircle } from 'lucide-react';
+import { MapPin, Calendar, Clock, Users, DollarSign, Star, ArrowLeft, Filter, X, AlertCircle, MapPinned } from 'lucide-react';
 import { pageTransition, scaleIn } from '../animations/motionVariants';
 import { useToast } from '../context/ToastContext';
 import { motion, AnimatePresence } from 'framer-motion';
 import { checkRideConflict } from '../services/scheduleExtractor';
+import { LocationPicker } from '../components/LocationPicker';
 
 
 interface Ride {
@@ -19,7 +20,12 @@ interface Ride {
   driverUniversity?: string;
   driverAge?: number;
   pickup: string;
+  pickupLat?: number;
+  pickupLng?: number;
   destination: string;
+  destinationLat?: number;
+  destinationLng?: number;
+  pickupType?: 'single' | 'multi' | 'both';
   date: string;
   time: string;
   seatsAvailable: number;
@@ -38,6 +44,11 @@ export const JoinRidePage: React.FC = () => {
   const [showFilters, setShowFilters] = useState(false);
   const [showPassengerModal, setShowPassengerModal] = useState(false);
   const [selectedRide, setSelectedRide] = useState<Ride | null>(null);
+  const [showPickupModal, setShowPickupModal] = useState(false);
+  const [showLocationPicker, setShowLocationPicker] = useState(false);
+  const [rideToJoin, setRideToJoin] = useState<Ride | null>(null);
+  const [pickupChoice, setPickupChoice] = useState<'driver' | 'custom'>('driver');
+  const [customPickup, setCustomPickup] = useState<{ address: string; lat: number; lng: number } | null>(null);
   const toast = useToast();
   const [filters, setFilters] = useState({
     destination: '',
@@ -145,22 +156,41 @@ export const JoinRidePage: React.FC = () => {
   const handleJoinRide = async (ride: Ride) => {
     if (!userData || !ride.id) return;
 
+    // Prevent duplicate joining
+    if (ride.passengers?.some(p => p.uid === userData.uid)) {
+      toast.warning('You have already joined this ride!');
+      return;
+    }
+
+    // Check if seats are still available
+    if (ride.seatsAvailable <= 0) {
+      toast.warning('Sorry, this ride is now full!');
+      return;
+    }
+
+    // Check if ride allows multi-pickup or both
+    const pickupType = ride.pickupType || 'single';
+
+    if (pickupType === 'multi' || pickupType === 'both') {
+      // Show pickup modal to let user choose
+      setRideToJoin(ride);
+      setPickupChoice('driver');
+      setCustomPickup(null);
+      setShowPickupModal(true);
+    } else {
+      // Single pickup only - proceed directly
+      await performJoinRide(ride, null);
+    }
+  };
+
+  const performJoinRide = async (ride: Ride, customPickupLocation: { address: string; lat: number; lng: number } | null) => {
+    if (!userData || !ride.id) return;
+
     try {
       console.log('=== JOIN RIDE DEBUG ===');
       console.log('Current ride data:', ride);
       console.log('User data:', userData);
-
-      // Prevent duplicate joining
-      if (ride.passengers?.some(p => p.uid === userData.uid)) {
-        toast.warning('You have already joined this ride!');
-        return;
-      }
-
-      // Check if seats are still available
-      if (ride.seatsAvailable <= 0) {
-        toast.warning('Sorry, this ride is now full!');
-        return;
-      }
+      console.log('Custom pickup:', customPickupLocation);
 
       const rideRef = doc(db, 'rides', ride.id);
 
@@ -185,14 +215,13 @@ export const JoinRidePage: React.FC = () => {
 
       console.log('✅ Ride update successful!');
 
-      // Optional: Create a booking record
-      await addDoc(collection(db, 'bookings'), {
-        rideId: ride.id,
+      // Create booking record with custom pickup if provided
+      const bookingData: any = {
+        rideID: ride.id,
         riderID: userData.uid,
         riderName: userData.name,
         driverID: ride.driverID,
         driverName: ride.driverName,
-        pickup: ride.pickup,
         destination: ride.destination,
         date: ride.date,
         time: ride.time,
@@ -200,11 +229,25 @@ export const JoinRidePage: React.FC = () => {
         seatsBooked: 1,
         status: 'active',
         createdAt: new Date().toISOString(),
-      });
+      };
+
+      // Add pickup location (custom or driver's)
+      if (customPickupLocation) {
+        bookingData.pickup = customPickupLocation.address;
+        bookingData.pickupLat = customPickupLocation.lat;
+        bookingData.pickupLng = customPickupLocation.lng;
+      } else {
+        bookingData.pickup = ride.pickup;
+        bookingData.pickupLat = ride.pickupLat;
+        bookingData.pickupLng = ride.pickupLng;
+      }
+
+      await addDoc(collection(db, 'bookings'), bookingData);
 
       console.log('✅ Booking created successfully!');
 
       toast.success('Successfully joined the ride!');
+      setShowPickupModal(false);
       navigate(`/chat/${ride.id}`);
     } catch (error) {
       console.error('❌ Error joining ride:', error);
@@ -458,17 +501,32 @@ export const JoinRidePage: React.FC = () => {
                 animate={{ opacity: 1, y: 0 }}
                 transition={{ delay: index * 0.1, duration: 0.3 }}
               >
-                {/* Schedule Tag */}
-                {tagInfo && (
-                  <div className={`mb-3 px-3 py-1.5 rounded-lg border text-xs font-medium flex items-center gap-2 ${tagInfo.color}`}>
-                    <span>{tagInfo.icon}</span>
-                    <span>{tagInfo.label}</span>
-                  </div>
-                )}
+                <div className="flex gap-2 mb-3">
+                  {/* Schedule Tag */}
+                  {tagInfo && (
+                    <div className={`flex-1 px-3 py-1.5 rounded-lg border text-xs font-medium flex items-center gap-2 ${tagInfo.color}`}>
+                      <span>{tagInfo.icon}</span>
+                      <span>{tagInfo.label}</span>
+                    </div>
+                  )}
+
+                  {/* Pickup Type Badge */}
+                  {ride.pickupType && ride.pickupType !== 'single' && (
+                    <div className="px-3 py-1.5 rounded-lg border text-xs font-medium flex items-center gap-1.5 bg-purple-500/20 border-purple-400/50 text-purple-300">
+                      <MapPinned className="w-3.5 h-3.5" />
+                      <span>{ride.pickupType === 'multi' ? 'Multi-Pickup' : 'Flexible Pickup'}</span>
+                    </div>
+                  )}
+                </div>
 
                 <div className="flex items-center justify-between mb-4">
                   <div>
-                    <h3 className="text-xl font-bold text-white">{ride.driverName}</h3>
+                    <h3
+                      onClick={() => navigate(`/user-stats/${ride.driverID}`)}
+                      className="text-xl font-bold text-white hover:text-cyan-400 cursor-pointer transition"
+                    >
+                      {ride.driverName}
+                    </h3>
                     <div className="flex items-center gap-3 mt-1">
                       <div className="flex items-center gap-1">
                         <Star className="w-4 h-4 text-yellow-400 fill-yellow-400" />
@@ -619,6 +677,141 @@ export const JoinRidePage: React.FC = () => {
           </motion.div>
         )}
       </AnimatePresence>
+
+      {/* Pickup Location Choice Modal */}
+      <AnimatePresence>
+        {showPickupModal && rideToJoin && (
+          <motion.div
+            className="fixed inset-0 bg-black/60 backdrop-blur-sm flex items-center justify-center z-50 px-4"
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            exit={{ opacity: 0 }}
+            onClick={() => setShowPickupModal(false)}
+          >
+            <motion.div
+              className="backdrop-blur-xl bg-white/10 border border-cyan-400/30 rounded-2xl p-6 max-w-lg w-full"
+              initial={{ scale: 0.9, opacity: 0 }}
+              animate={{ scale: 1, opacity: 1 }}
+              exit={{ scale: 0.9, opacity: 0 }}
+              onClick={(e) => e.stopPropagation()}
+            >
+              <div className="flex items-center justify-between mb-4">
+                <h3 className="text-2xl font-bold text-white">Choose Pickup Location</h3>
+                <button
+                  onClick={() => setShowPickupModal(false)}
+                  className="text-cyan-400 hover:text-cyan-300 transition"
+                >
+                  <X className="w-6 h-6" />
+                </button>
+              </div>
+
+              <p className="text-cyan-300 mb-6">
+                This ride allows {rideToJoin.pickupType === 'both' ? 'multiple pickup options' : 'custom pickup locations'}.
+                Choose where you'd like to be picked up:
+              </p>
+
+              <div className="space-y-4">
+                {/* Driver's Pickup Location Option */}
+                {(rideToJoin.pickupType === 'both' || rideToJoin.pickupType === 'single') && (
+                  <motion.button
+                    type="button"
+                    onClick={() => setPickupChoice('driver')}
+                    className={`w-full p-4 rounded-lg border-2 transition-all text-left ${
+                      pickupChoice === 'driver'
+                        ? 'bg-cyan-500/20 border-cyan-400 shadow-lg shadow-cyan-500/30'
+                        : 'bg-white/5 border-cyan-400/30 hover:border-cyan-400/50'
+                    }`}
+                    whileHover={{ scale: 1.02 }}
+                    whileTap={{ scale: 0.98 }}
+                  >
+                    <div className="flex items-start gap-3">
+                      <MapPin className="w-6 h-6 text-cyan-400 flex-shrink-0 mt-1" />
+                      <div>
+                        <h4 className="text-white font-semibold mb-1">Driver's Pickup Location</h4>
+                        <p className="text-cyan-300 text-sm">{rideToJoin.pickup}</p>
+                      </div>
+                    </div>
+                  </motion.button>
+                )}
+
+                {/* Custom Pickup Location Option */}
+                {(rideToJoin.pickupType === 'both' || rideToJoin.pickupType === 'multi') && (
+                  <motion.button
+                    type="button"
+                    onClick={() => setPickupChoice('custom')}
+                    className={`w-full p-4 rounded-lg border-2 transition-all text-left ${
+                      pickupChoice === 'custom'
+                        ? 'bg-purple-500/20 border-purple-400 shadow-lg shadow-purple-500/30'
+                        : 'bg-white/5 border-cyan-400/30 hover:border-cyan-400/50'
+                    }`}
+                    whileHover={{ scale: 1.02 }}
+                    whileTap={{ scale: 0.98 }}
+                  >
+                    <div className="flex items-start gap-3">
+                      <MapPinned className="w-6 h-6 text-purple-400 flex-shrink-0 mt-1" />
+                      <div>
+                        <h4 className="text-white font-semibold mb-1">Custom Pickup Location</h4>
+                        <p className="text-cyan-300 text-sm">
+                          {customPickup ? customPickup.address : 'Choose your own pickup location on the map'}
+                        </p>
+                      </div>
+                    </div>
+                  </motion.button>
+                )}
+
+                {/* Location Picker Button (shown when custom is selected) */}
+                {pickupChoice === 'custom' && (
+                  <motion.button
+                    type="button"
+                    onClick={() => setShowLocationPicker(true)}
+                    className="w-full py-3 bg-purple-500/20 border border-purple-400/50 text-purple-300 rounded-lg hover:bg-purple-500/30 transition flex items-center justify-center gap-2"
+                    initial={{ opacity: 0, height: 0 }}
+                    animate={{ opacity: 1, height: 'auto' }}
+                    whileHover={{ scale: 1.02 }}
+                    whileTap={{ scale: 0.98 }}
+                  >
+                    <MapPinned className="w-5 h-5" />
+                    {customPickup ? 'Change Location' : 'Pick Location on Map'}
+                  </motion.button>
+                )}
+              </div>
+
+              {/* Confirmation Button */}
+              <motion.button
+                onClick={() => {
+                  if (pickupChoice === 'custom' && !customPickup) {
+                    toast.warning('Please select a custom pickup location');
+                    return;
+                  }
+                  performJoinRide(rideToJoin, pickupChoice === 'custom' ? customPickup : null);
+                }}
+                disabled={pickupChoice === 'custom' && !customPickup}
+                className={`w-full mt-6 py-4 font-semibold rounded-lg transition ${
+                  pickupChoice === 'custom' && !customPickup
+                    ? 'bg-gray-500/30 text-gray-400 cursor-not-allowed border border-gray-500/50'
+                    : 'bg-gradient-to-r from-cyan-500 to-blue-500 text-white hover:shadow-lg hover:shadow-cyan-500/50'
+                }`}
+                whileHover={!(pickupChoice === 'custom' && !customPickup) ? { scale: 1.02 } : {}}
+                whileTap={!(pickupChoice === 'custom' && !customPickup) ? { scale: 0.98 } : {}}
+              >
+                Confirm & Join Ride
+              </motion.button>
+            </motion.div>
+          </motion.div>
+        )}
+      </AnimatePresence>
+
+      {/* Location Picker Modal */}
+      <LocationPicker
+        isOpen={showLocationPicker}
+        onClose={() => setShowLocationPicker(false)}
+        onSelect={(location) => {
+          setCustomPickup(location);
+          setShowLocationPicker(false);
+        }}
+        title="Select Your Pickup Location"
+        initialLocation={customPickup}
+      />
     </motion.div>
   );
 };

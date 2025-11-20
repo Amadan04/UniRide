@@ -217,11 +217,11 @@ export const ChatPage: React.FC = () => {
 
           <div className="flex items-center gap-2">
             <button
-              onClick={() => navigate(`/map/${rideID}`)}
+              onClick={() => navigate(`/tracking/${rideID}`)}
               className="flex items-center gap-2 px-4 py-2 bg-cyan-500/20 border border-cyan-400/30 rounded-lg text-cyan-400 hover:bg-cyan-500/30 transition"
             >
               <Map className="w-5 h-5" />
-              <span className="hidden md:inline">View Map</span>
+              <span className="hidden md:inline">Live Tracking</span>
             </button>
 
             {rideInfo && (
@@ -384,14 +384,20 @@ export const ChatPage: React.FC = () => {
                   rideInfo.passengers.map((passenger, index) => (
                     <motion.div
                       key={passenger.uid}
-                      className="bg-white/5 border border-cyan-400/20 rounded-lg p-4"
+                      onClick={() => {
+                        setShowPassengerModal(false);
+                        navigate(`/user-stats/${passenger.uid}`);
+                      }}
+                      className="bg-white/5 border border-cyan-400/20 rounded-lg p-4 hover:bg-white/10 cursor-pointer transition"
                       initial={{ opacity: 0, x: -20 }}
                       animate={{ opacity: 1, x: 0 }}
                       transition={{ delay: index * 0.1 }}
+                      whileHover={{ scale: 1.02 }}
+                      whileTap={{ scale: 0.98 }}
                     >
                       <div className="flex items-center justify-between">
                         <div>
-                          <p className="text-white font-semibold">{passenger.name}</p>
+                          <p className="text-white font-semibold hover:text-cyan-400 transition">{passenger.name}</p>
                           {passenger.joinedAt && (
                             <p className="text-cyan-300/70 text-sm">
                               Joined {new Date(passenger.joinedAt).toLocaleDateString('en-US', {

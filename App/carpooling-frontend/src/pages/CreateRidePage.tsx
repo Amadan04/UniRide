@@ -25,6 +25,7 @@ export const CreateRidePage: React.FC = () => {
     destination: '',
     destinationLat: 0,
     destinationLng: 0,
+    pickupType: 'single' as 'single' | 'multi' | 'both',
     date: '',
     time: '',
     totalSeats: '',
@@ -49,6 +50,7 @@ export const CreateRidePage: React.FC = () => {
       destination: formData.destination,
       destinationLat: formData.destinationLat,
       destinationLng: formData.destinationLng,
+      pickupType: formData.pickupType,         // New field for pickup type
       date: formData.date,
       time: formData.time,
       totalSeats: parseInt(formData.totalSeats),
@@ -163,7 +165,69 @@ export const CreateRidePage: React.FC = () => {
                   </motion.button>
                 </div>
               </div>
+            </div>
 
+            {/* Pickup Type Selection */}
+            <div>
+              <label className="block text-cyan-300 mb-3 text-sm font-medium">Pickup Type</label>
+              <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                <motion.button
+                  type="button"
+                  onClick={() => setFormData({ ...formData, pickupType: 'single' })}
+                  className={`p-4 rounded-lg border-2 transition-all ${
+                    formData.pickupType === 'single'
+                      ? 'bg-cyan-500/20 border-cyan-400 shadow-lg shadow-cyan-500/30'
+                      : 'bg-white/5 border-cyan-400/30 hover:border-cyan-400/50'
+                  }`}
+                  whileHover={{ scale: 1.02 }}
+                  whileTap={{ scale: 0.98 }}
+                >
+                  <div className="text-center">
+                    <MapPin className="w-8 h-8 text-cyan-400 mx-auto mb-2" />
+                    <h3 className="text-white font-semibold mb-1">Single Pickup</h3>
+                    <p className="text-cyan-300 text-xs">All passengers meet at your pickup location</p>
+                  </div>
+                </motion.button>
+
+                <motion.button
+                  type="button"
+                  onClick={() => setFormData({ ...formData, pickupType: 'multi' })}
+                  className={`p-4 rounded-lg border-2 transition-all ${
+                    formData.pickupType === 'multi'
+                      ? 'bg-cyan-500/20 border-cyan-400 shadow-lg shadow-cyan-500/30'
+                      : 'bg-white/5 border-cyan-400/30 hover:border-cyan-400/50'
+                  }`}
+                  whileHover={{ scale: 1.02 }}
+                  whileTap={{ scale: 0.98 }}
+                >
+                  <div className="text-center">
+                    <MapPin className="w-8 h-8 text-purple-400 mx-auto mb-2" />
+                    <h3 className="text-white font-semibold mb-1">Multiple Pickups</h3>
+                    <p className="text-cyan-300 text-xs">Passengers can choose their own pickup locations</p>
+                  </div>
+                </motion.button>
+
+                <motion.button
+                  type="button"
+                  onClick={() => setFormData({ ...formData, pickupType: 'both' })}
+                  className={`p-4 rounded-lg border-2 transition-all ${
+                    formData.pickupType === 'both'
+                      ? 'bg-cyan-500/20 border-cyan-400 shadow-lg shadow-cyan-500/30'
+                      : 'bg-white/5 border-cyan-400/30 hover:border-cyan-400/50'
+                  }`}
+                  whileHover={{ scale: 1.02 }}
+                  whileTap={{ scale: 0.98 }}
+                >
+                  <div className="text-center">
+                    <MapPin className="w-8 h-8 text-green-400 mx-auto mb-2" />
+                    <h3 className="text-white font-semibold mb-1">Both Options</h3>
+                    <p className="text-cyan-300 text-xs">Passengers can choose either option</p>
+                  </div>
+                </motion.button>
+              </div>
+            </div>
+
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
               <div>
                 <label className="block text-cyan-300 mb-2 text-sm font-medium">Date</label>
                 <div className="relative">

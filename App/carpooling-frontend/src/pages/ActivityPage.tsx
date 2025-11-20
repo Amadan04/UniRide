@@ -7,6 +7,7 @@ import { Calendar, MapPin, Clock, Star, ArrowLeft, MessageSquare, X, Users, Edit
 import { pageTransition, staggerContainer, scaleIn } from '../animations/motionVariants';
 import { useToast } from '../context/ToastContext';
 import { collection, query, where, getDocs, doc, setDoc, updateDoc, deleteDoc } from 'firebase/firestore';
+import { updateUserStats } from '../services/scoreService';
 
 interface Ride {
   id: string;
@@ -101,10 +102,28 @@ export const ActivityPage: React.FC = () => {
             completedAt: new Date().toISOString(),
             autoCompleted: true
           });
+
+          // Update stats for driver
+          try {
+            await updateUserStats(ride.driverID);
+          } catch (error) {
+            console.error(`Error updating stats for driver ${ride.driverID}:`, error);
+          }
+
+          // Update stats for all passengers
+          if (ride.passengers && ride.passengers.length > 0) {
+            for (const passenger of ride.passengers) {
+              try {
+                await updateUserStats(passenger.uid);
+              } catch (error) {
+                console.error(`Error updating stats for passenger ${passenger.uid}:`, error);
+              }
+            }
+          }
         }
 
         if (expiredRides.length > 0) {
-          console.log(`Auto-completed ${expiredRides.length} expired rides`);
+          console.log(`Auto-completed ${expiredRides.length} expired rides and updated user stats`);
           fetchRides(); // Refresh the ride list
         }
       } catch (error) {
@@ -250,8 +269,24 @@ export const ActivityPage: React.FC = () => {
     if (!selectedRide) return;
     try {
       await updateDoc(doc(db, 'rides', selectedRide.id), {
-        status: 'completed'
+        status: 'completed',
+        completedAt: new Date().toISOString()
       });
+
+      // Update stats for driver
+      await updateUserStats(selectedRide.driverID);
+
+      // Update stats for all passengers
+      if (selectedRide.passengers && selectedRide.passengers.length > 0) {
+        for (const passenger of selectedRide.passengers) {
+          try {
+            await updateUserStats(passenger.uid);
+          } catch (error) {
+            console.error(`Error updating stats for passenger ${passenger.uid}:`, error);
+          }
+        }
+      }
+
       toast.success('Ride marked as complete!');
       setShowManageModal(false);
       fetchRides();
@@ -390,7 +425,12 @@ export const ActivityPage: React.FC = () => {
       animate={{ opacity: 1, y: 0 }}
     >
       <div className="flex items-center justify-between mb-4">
-        <h3 className="text-xl font-bold text-white">{ride.driverName}</h3>
+        <h3
+          onClick={() => navigate(`/user-stats/${ride.driverID}`)}
+          className="text-xl font-bold text-white hover:text-cyan-400 cursor-pointer transition"
+        >
+          {ride.driverName}
+        </h3>
         <span
           className={`px-3 py-1 rounded-full text-sm font-semibold ${
             isCompleted
@@ -686,9 +726,13 @@ export const ActivityPage: React.FC = () => {
                     selectedRide.passengers.map((passenger, index) => (
                       <div
                         key={passenger.uid}
-                        className="bg-white/5 border border-cyan-400/20 rounded-lg p-3"
+                        onClick={() => {
+                          setShowManageModal(false);
+                          navigate(`/user-stats/${passenger.uid}`);
+                        }}
+                        className="bg-white/5 border border-cyan-400/20 rounded-lg p-3 hover:bg-white/10 cursor-pointer transition"
                       >
-                        <p className="text-white text-sm">{passenger.name}</p>
+                        <p className="text-white text-sm hover:text-cyan-400 transition">{passenger.name}</p>
                       </div>
                     ))
                   ) : (

@@ -1,0 +1,33 @@
+{
+  "indexes": [
+    {
+      "collectionGroup": "rides",
+      "queryScope": "COLLECTION",
+      "fields": [
+        {
+          "fieldPath": "driverID",
+          "order": "ASCENDING"
+        },
+        {
+          "fieldPath": "createdAt",
+          "order": "ASCENDING"
+        }
+      ]
+    },
+    {
+      "collectionGroup": "bookings",
+      "queryScope": "COLLECTION",
+      "fields": [
+        {
+          "fieldPath": "riderID",
+          "order": "ASCENDING"
+        },
+        {
+          "fieldPath": "status",
+          "order": "ASCENDING"
+        }
+      ]
+    }
+  ],
+  "fieldOverrides": []
+}

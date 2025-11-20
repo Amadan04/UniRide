@@ -173,14 +173,14 @@ export const LocationPicker: React.FC<LocationPickerProps> = ({
         onClick={onClose}
       >
         <motion.div
-          className="backdrop-blur-xl bg-gradient-to-br from-slate-900/95 to-blue-900/95 border border-cyan-400/50 rounded-2xl max-w-4xl w-full max-h-[90vh] overflow-hidden shadow-2xl"
+          className="backdrop-blur-xl bg-gradient-to-br from-slate-900/95 to-blue-900/95 border border-cyan-400/50 rounded-2xl max-w-4xl w-full max-h-[90vh] flex flex-col shadow-2xl"
           initial={{ scale: 0.9, opacity: 0, y: 20 }}
           animate={{ scale: 1, opacity: 1, y: 0 }}
           exit={{ scale: 0.9, opacity: 0, y: 20 }}
           onClick={(e) => e.stopPropagation()}
         >
           {/* Header */}
-          <div className="bg-slate-900/80 border-b border-cyan-400/30 p-4 flex items-center justify-between">
+          <div className="bg-slate-900/80 border-b border-cyan-400/30 p-4 flex items-center justify-between flex-shrink-0">
             <h2 className="text-2xl font-bold text-white flex items-center gap-2">
               <MapPin className="w-6 h-6 text-cyan-400" />
               {title}
@@ -193,7 +193,7 @@ export const LocationPicker: React.FC<LocationPickerProps> = ({
             </button>
           </div>
 
-          <div className="p-6 space-y-4">
+          <div className="p-6 space-y-4 overflow-y-auto flex-1">
             {/* Search Bar */}
             <div className="flex gap-2">
               <div className="flex-1 relative">

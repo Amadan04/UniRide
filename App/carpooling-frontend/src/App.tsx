@@ -17,6 +17,8 @@ import { AIAssistantPage } from './pages/AIAssistantPage';
 import { ClassSchedulePage } from './pages/ClassSchedulePage';
 import { LiveTrackingPage } from './pages/LiveTrackingPage';
 import { LiveTrackingDemoPage } from './pages/LiveTrackingDemoPage';
+import { UserStatsPage } from './pages/UserStatsPage';
+import { LeaderboardPage } from './pages/LeaderboardPage';
 import { FloatingChatButton } from './components/FloatingChatButton';
 import { ToastProvider } from './context/ToastContext';
 
@@ -132,6 +134,24 @@ function App() {
                 element={
                   <ProtectedRoute>
                     <LiveTrackingDemoPage />
+                  </ProtectedRoute>
+                }
+              />
+
+              <Route
+                path="/user-stats/:userID"
+                element={
+                  <ProtectedRoute>
+                    <UserStatsPage />
+                  </ProtectedRoute>
+                }
+              />
+
+              <Route
+                path="/leaderboard"
+                element={
+                  <ProtectedRoute>
+                    <LeaderboardPage />
                   </ProtectedRoute>
                 }
               />
