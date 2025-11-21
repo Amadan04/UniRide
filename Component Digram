@@ -1,0 +1,20 @@
+---Component Diagram----
+
+Actor; User 
+Components: Mobile OR Web client , UniRide Backend API , user management as Auth, ride management, booking managment, 
+notfication Component, database as DB , Map API / geolocation
+
+Client--> backend : REST API ( api/auth , api/rides, api/bookings, api/notifications)
+Backend --> Auth
+Backend --> RideMgmt
+Backend --> BookingMgt
+Backend --> Notif
+
+Auth --> DB : users
+RideMgmt --> DB: rides, vehicles 
+BookingMgmt --> DB: bookings 
+Notif --> DB: notifications
+
+RideMgmt --> MapAPI: getRout(), getcode()
+BookingMgmt --> Notif: bookingcreatesd, booking Approved 
+RideMgmt --> Notif: rideCancelled 
