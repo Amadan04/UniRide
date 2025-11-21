@@ -1,0 +1,62 @@
+----Class diagrams strucutre--------
+class User{
+-UserID; String
+-name;String 
+-email; String 
+-PasswordHash; Sting 
+-role; userRole 
+-rating: Double 
++register()
++login()
++Updateprofile()
+}
+Class Ride{
+rideId: String
+driverID: String
+origin;String
+destination: String
+departureTime; String 
+availableSeats: int 
+price; Double
+status: rideStatus 
++publish()
++UpdataRide()
++cancelRide()
++hasAvailableSeats(requestedSeats: Int) : Boolean
+}
+
+class Booking{
+-BookingID : String 
+-rideID; String
+-passengerId; String 
+-seatsBooked: int 
+-status; booking status 
+-createdAt; dateTime 
++request()
++approve()
++reject()
++cancel
+}
+class vehical{
+-vehicleID: String
+-driverID :String 
+-platenumber; String
+-model; string
+-color; string
+-seatCount; int
++updateDetails()
+}
+
+class notification{
+- notificationId : String
+  - userId : String
+  - type : NotificationType
+  - message : String
+  - createdAt : DateTime
+  - isRead : Boolean
+  + markAsRead()
+}
+
+User>Ride>Posts
+User>Booking;makes
+User>Notifications;recives 
