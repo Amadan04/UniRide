@@ -3,7 +3,7 @@ import { useNavigate } from 'react-router-dom';
 import { motion } from 'framer-motion';
 import { createUserWithEmailAndPassword, signInWithEmailAndPassword, sendEmailVerification } from 'firebase/auth';
 import { auth, db } from '../firebase';
-import { Car, Mail, Lock, User, Calendar, Users, GraduationCap } from 'lucide-react';
+import { Car, Mail, Lock, User, Calendar, Users, GraduationCap, Check, X } from 'lucide-react';
 import { fadeInUp } from '../animations/gsapAnimations';
 import { pageTransition, scaleIn } from '../animations/motionVariants';
 import { doc, setDoc, serverTimestamp } from "firebase/firestore";
@@ -36,7 +36,6 @@ export const AuthPage: React.FC = () => {
   const [error, setError] = useState('');
   const navigate = useNavigate();
   const formRef = useRef<HTMLDivElement>(null);
-  const [passwordError, setPasswordError] = useState('');
   const toast = useToast();
 
   const [formData, setFormData] = useState({
@@ -51,6 +50,44 @@ export const AuthPage: React.FC = () => {
 
   const passwordRegex = /^(?=.*[a-z])(?=.*[A-Z])(?=.*\d).{8,}$/;
 
+  // Password validation state
+  const [passwordValidation, setPasswordValidation] = useState({
+    minLength: false,
+    hasUppercase: false,
+    hasLowercase: false,
+    hasNumber: false,
+  });
+
+  // Email validation state
+  const [emailValid, setEmailValid] = useState<boolean | null>(null);
+
+  // Validate email format
+  const validateEmail = (email: string): boolean => {
+    const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+    return emailRegex.test(email);
+  };
+
+  // Update password validation when password changes
+  useEffect(() => {
+    if (!isLogin && formData.password) {
+      setPasswordValidation({
+        minLength: formData.password.length >= 8,
+        hasUppercase: /[A-Z]/.test(formData.password),
+        hasLowercase: /[a-z]/.test(formData.password),
+        hasNumber: /\d/.test(formData.password),
+      });
+    }
+  }, [formData.password, isLogin]);
+
+  // Update email validation when email changes
+  useEffect(() => {
+    if (!isLogin && formData.email) {
+      setEmailValid(validateEmail(formData.email));
+    } else {
+      setEmailValid(null);
+    }
+  }, [formData.email, isLogin]);
+
   useEffect(() => {
     if (formRef.current) {
       fadeInUp(formRef.current, 0.2);
@@ -60,13 +97,18 @@ export const AuthPage: React.FC = () => {
   const handleSubmit = async (e: React.FormEvent) => {
   e.preventDefault();
   setError('');
-  setPasswordError('');
   setLoading(true);
 
   // Validate password for signup
   if (!isLogin && !passwordRegex.test(formData.password)) {
-    setPasswordError('Password must be at least 8 characters with 1 uppercase, 1 lowercase, and 1 number');
-    toast.error('Invalid password format');
+    toast.error('Please meet all password requirements');
+    setLoading(false);
+    return;
+  }
+
+  // Validate email for signup
+  if (!isLogin && !emailValid) {
+    toast.error('Please enter a valid email address');
     setLoading(false);
     return;
   }
@@ -135,9 +177,6 @@ export const AuthPage: React.FC = () => {
 
   const handleChange = (e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement>) => {
   setFormData({ ...formData, [e.target.name]: e.target.value });
-  if (e.target.name === 'password') {
-    setPasswordError('');
-  }
 };
 
   return (
@@ -210,32 +249,92 @@ export const AuthPage: React.FC = () => {
               </div>
             )}
 
-            <div className="relative">
-              <Mail className="absolute left-3 top-1/2 -translate-y-1/2 w-5 h-5 text-cyan-400" />
-              <input
-                type="email"
-                name="email"
-                placeholder="Email"
-                value={formData.email}
-                onChange={handleChange}
-                required
-                className="w-full pl-12 pr-4 py-3 bg-white/5 border border-cyan-400/30 rounded-lg text-white placeholder-cyan-300/50 focus:outline-none focus:border-cyan-400 transition"
-              />
+            <div>
+              <div className="relative">
+                <Mail className="absolute left-3 top-1/2 -translate-y-1/2 w-5 h-5 text-cyan-400" />
+                <input
+                  type="email"
+                  name="email"
+                  placeholder="Email"
+                  value={formData.email}
+                  onChange={handleChange}
+                  required
+                  className={`w-full pl-12 pr-4 py-3 bg-white/5 border rounded-lg text-white placeholder-cyan-300/50 focus:outline-none focus:border-cyan-400 transition ${
+                    !isLogin && formData.email
+                      ? emailValid
+                        ? 'border-green-400/50'
+                        : 'border-red-400/50'
+                      : 'border-cyan-400/30'
+                  }`}
+                />
+              </div>
+              {!isLogin && formData.email && emailValid === false && (
+                <motion.p
+                  initial={{ opacity: 0, y: -5 }}
+                  animate={{ opacity: 1, y: 0 }}
+                  className="text-red-400 text-xs mt-1 ml-1 flex items-center gap-1"
+                >
+                  <X className="w-3 h-3" />
+                  Please enter a valid email address
+                </motion.p>
+              )}
             </div>
 
-            <div className="relative">
-              <Lock className="absolute left-3 top-1/2 -translate-y-1/2 w-5 h-5 text-cyan-400" />
-              <input
-                type="password"
-                name="password"
-                placeholder="Password"
-                value={formData.password}
-                onChange={handleChange}
-                required
-                className="w-full pl-12 pr-4 py-3 bg-white/5 border border-cyan-400/30 rounded-lg text-white placeholder-cyan-300/50 focus:outline-none focus:border-cyan-400 transition"
-              />
-              {!isLogin && passwordError && (
-                <p className="text-red-400 text-sm mt-1">{passwordError}</p>
+            <div>
+              <div className="relative">
+                <Lock className="absolute left-3 top-1/2 -translate-y-1/2 w-5 h-5 text-cyan-400" />
+                <input
+                  type="password"
+                  name="password"
+                  placeholder="Password"
+                  value={formData.password}
+                  onChange={handleChange}
+                  required
+                  className="w-full pl-12 pr-4 py-3 bg-white/5 border border-cyan-400/30 rounded-lg text-white placeholder-cyan-300/50 focus:outline-none focus:border-cyan-400 transition"
+                />
+              </div>
+              {!isLogin && formData.password && (
+                <motion.div
+                  initial={{ opacity: 0, y: -5 }}
+                  animate={{ opacity: 1, y: 0 }}
+                  className="mt-2 space-y-1"
+                >
+                  <p className="text-xs text-cyan-300 mb-1.5">Password requirements:</p>
+                  <div className="grid grid-cols-2 gap-1">
+                    <div className={`text-xs flex items-center gap-1.5 ${passwordValidation.minLength ? 'text-green-400' : 'text-gray-400'}`}>
+                      {passwordValidation.minLength ? (
+                        <Check className="w-3 h-3" />
+                      ) : (
+                        <X className="w-3 h-3" />
+                      )}
+                      <span>8+ characters</span>
+                    </div>
+                    <div className={`text-xs flex items-center gap-1.5 ${passwordValidation.hasUppercase ? 'text-green-400' : 'text-gray-400'}`}>
+                      {passwordValidation.hasUppercase ? (
+                        <Check className="w-3 h-3" />
+                      ) : (
+                        <X className="w-3 h-3" />
+                      )}
+                      <span>Uppercase letter</span>
+                    </div>
+                    <div className={`text-xs flex items-center gap-1.5 ${passwordValidation.hasLowercase ? 'text-green-400' : 'text-gray-400'}`}>
+                      {passwordValidation.hasLowercase ? (
+                        <Check className="w-3 h-3" />
+                      ) : (
+                        <X className="w-3 h-3" />
+                      )}
+                      <span>Lowercase letter</span>
+                    </div>
+                    <div className={`text-xs flex items-center gap-1.5 ${passwordValidation.hasNumber ? 'text-green-400' : 'text-gray-400'}`}>
+                      {passwordValidation.hasNumber ? (
+                        <Check className="w-3 h-3" />
+                      ) : (
+                        <X className="w-3 h-3" />
+                      )}
+                      <span>Number</span>
+                    </div>
+                  </div>
+                </motion.div>
               )}
             </div>
 
