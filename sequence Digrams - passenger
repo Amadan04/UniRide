@@ -1,0 +1,22 @@
+----------Passenger Books a ride-----------
+Actors: Passenger
+participant: MobileApp, ridecontroller, bookingservice,rideRepository, bookingrepository, notificationService,Driver 
+
+
+Passenger>>MobileApp; select ride and request Booking 
+MobileApp>>RideController: requestBooking(rideId, passengerID,seats)
+BookingService>>rideRepostiory; findById(rideID)
+RideRepostiory>>BookingService: ride 
+
+---Ride has available seats-------
+BookingService>>BookingRepostiory: Save(new Booking)
+BookingRepostiory-->>BookingService: Booking 
+BookingService>>notificationService: notifyDriver(Booking created )
+notificationService->>Driver: booking request notification 
+BookingService-->>RideController: BookingPending (booking)
+RideController-->MobileAPP: showBooking Pending 
+
+else; "no seaets available" 
+ BookingService-->>RideController: error("No seats available")
+        RideController-->>MobileApp: Show error message
+    end
