@@ -1,0 +1,19 @@
+---sequence Diagram-Driver Posts a ride-----
+Actor: Driver 
+Participant: MobileApp,RideController,RideService, RideRepository
+
+-Driver>>MobileAPP: open post Ride form
+-MobileApp>>Driver; Display form(origin , destination , time , seats, price)
+Driver>>MobileApp: submit Ride details 
+MobileAPP >> RideController; createRide(rideData, driverId)
+RideController>>RideService ; createRide(ridedata, driverID)
+RideService>>RideService: validateRideData(rideData)
+
+DATA valid
+rideService>>rideRepository; save(new ride)
+rideRepository>>rideService; ride with rideID
+rideService>>rideController MobileAPP; 'show ride posted successfully'
+
+else data invalid;; 
+rideService>>rideController: validationError
+rideController>>MobileAPP: validation errors
