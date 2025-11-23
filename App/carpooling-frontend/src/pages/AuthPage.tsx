@@ -3,7 +3,7 @@ import { useNavigate } from 'react-router-dom';
 import { motion } from 'framer-motion';
 import { createUserWithEmailAndPassword, signInWithEmailAndPassword, sendEmailVerification } from 'firebase/auth';
 import { auth, db } from '../firebase';
-import { Car, Mail, Lock, User, Calendar, Users, GraduationCap, Check, X } from 'lucide-react';
+import { Car, Mail, Lock, User, Calendar, Users, GraduationCap, Check, X, Loader2 } from 'lucide-react';
 import { fadeInUp } from '../animations/gsapAnimations';
 import { pageTransition, scaleIn } from '../animations/motionVariants';
 import { doc, setDoc, serverTimestamp } from "firebase/firestore";
@@ -60,11 +60,55 @@ export const AuthPage: React.FC = () => {
 
   // Email validation state
   const [emailValid, setEmailValid] = useState<boolean | null>(null);
+  const [resendingEmail, setResendingEmail] = useState(false);
 
   // Validate email format
   const validateEmail = (email: string): boolean => {
     const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
     return emailRegex.test(email);
+  };
+
+  // Resend verification email
+  const handleResendVerification = async () => {
+    if (!formData.email || !formData.password) {
+      toast.error('Please enter your email and password');
+      return;
+    }
+
+    setResendingEmail(true);
+
+    try {
+      // Sign in to get the user
+      const { user } = await signInWithEmailAndPassword(auth, formData.email, formData.password);
+
+      // Check if already verified
+      await user.reload();
+      if (user.emailVerified) {
+        toast.success('Your email is already verified! You can now sign in.');
+        setError('');
+        await auth.signOut();
+        setResendingEmail(false);
+        return;
+      }
+
+      // Send new verification email with action URL
+      const actionCodeSettings = {
+        url: window.location.origin + '/auth',
+        handleCodeInApp: false,
+      };
+      await sendEmailVerification(user, actionCodeSettings);
+      toast.success('Verification email sent! Please check your inbox.');
+      setError('A new verification link has been sent to your email.');
+
+      // Sign out after sending
+      await auth.signOut();
+    } catch (err: any) {
+      console.error('Resend verification error:', err);
+      const friendlyError = getFirebaseErrorMessage(err.code);
+      toast.error(friendlyError);
+    } finally {
+      setResendingEmail(false);
+    }
   };
 
   // Update password validation when password changes
@@ -134,9 +178,13 @@ export const AuthPage: React.FC = () => {
       // 🆕 SIGN UP
       const { user } = await createUserWithEmailAndPassword(auth, formData.email, formData.password);
 
-      // Send email verification
+      // Send email verification with action URL
       try {
-        await sendEmailVerification(user);
+        const actionCodeSettings = {
+          url: window.location.origin + '/auth',
+          handleCodeInApp: false,
+        };
+        await sendEmailVerification(user, actionCodeSettings);
         console.log("📧 Verification email sent to:", user.email);
       } catch (emailErr) {
         console.warn("⚠️ Failed to send verification email:", emailErr);
@@ -225,11 +273,35 @@ export const AuthPage: React.FC = () => {
 
           {error && (
             <motion.div
-              className="bg-red-500/20 border border-red-500 text-red-300 px-4 py-3 rounded-lg mb-4"
               initial={{ opacity: 0, y: -10 }}
               animate={{ opacity: 1, y: 0 }}
+              className="mb-4"
             >
-              {error}
+              <div className="bg-red-500/20 border border-red-500 text-red-300 px-4 py-3 rounded-lg">
+                {error}
+              </div>
+
+              {/* Show Resend button only if error is about email verification */}
+              {isLogin && error.includes('verify your email') && (
+                <button
+                  type="button"
+                  onClick={handleResendVerification}
+                  disabled={resendingEmail}
+                  className="w-full mt-3 px-4 py-2 bg-cyan-500/20 text-cyan-300 rounded-lg hover:bg-cyan-500/30 transition-colors disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2"
+                >
+                  {resendingEmail ? (
+                    <>
+                      <Loader2 className="w-4 h-4 animate-spin" />
+                      Sending...
+                    </>
+                  ) : (
+                    <>
+                      <Mail className="w-4 h-4" />
+                      Resend Verification Email
+                    </>
+                  )}
+                </button>
+              )}
             </motion.div>
           )}
 
