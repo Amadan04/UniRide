@@ -1,0 +1,15 @@
+The design of the UniRide system operates based on ethical user-centered design principles so that students can interact with the app safely and equitably, and have confidence that their information is handled appropriately. The system deals with personal and real-time data, so ethical framework considerations were integrated into all planning and design phases.  
+
+Ride-sharing apps, in general, have privacy issues. UniRide collects only the necessary information to complete an account and use the app, including only the name, email, and temporary live location while on an active ride. Location data is never retained, and is only available to the other user during an active ride. Sensitive information including passwords and user identification is defended with Firebase Authentication and secure database rules to mitigate abuse by outsiders. This design approach protects students from the potential misuse of personal information while maintaining confidence in the system. 
+
+ UniRide, like all other systems, is required to follow ethical considerations. The system is designed to match requests to potential passengers/dominant interims and to drivers in a wholly non-discriminatory manner. All matchmaking is based on distance, available seats, departure time, ride rating, and other logistical criteria, while gender, nationality, and other attributes remain entirely irrelevant. 
+
+The dual rating system gives both sides the ability to rate an experience to incentivize each party to act civilly with one another. This creates an equitable system amongst the both parties. 
+
+Safety has also been integrated into the system. Users who wish to create or join a ride will be required to verify themselves. This should help mitigate the risks associated with phantom or malicious accounts. The system gives rides details and updates the user is able to see. Their location will only be made available to the driver when there is an active ride and the user has access to the details like pickup location, time to pickup driver details, and most other essentials. With hopes these will help students navigate the system with confidence. 
+
+A major ethical consideration was the tradeoff between privacy and convenience. Knowing a user’s location in real time improves communication and provides an easier pickup experience. Nonetheless, there is a tradeoff between privacy and excessive location sharing outside of the ride and for lengthy time spans. We only activate location sharing during the ride and access the system minimally to preserve convenience. It’s a tradeoff we believe is worth it to ensure users private data is only captured for the ride duration. 
+
+To summarize, UniRide's ethical design centers around safeguarding user information and no public information is passed around. 
+
+Overall, the all the ethical design side of UniRide focuses on maintaining safety, ensuring fair treatment, protecting user data, and balancing functionality with privacy. For all the students at the university to be having a trustworthy and reliable system, these principles will help create it  
