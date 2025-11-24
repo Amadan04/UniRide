@@ -74,7 +74,7 @@
 
 ### Installation
 
-\`\`\`bash
+```bash
 # Clone repository
 git clone https://github.com/YOUR_USERNAME/SWEN360.git
 cd SWEN360/App/carpooling-frontend
@@ -89,7 +89,7 @@ cp .env.example .env
 # Run development server
 npm run dev
 # Opens at http://localhost:5173
-\`\`\`
+```
 
 ---
 
@@ -97,7 +97,7 @@ npm run dev
 
 Create \`App/carpooling-frontend/.env\`:
 
-\`\`\`env
+```env
 VITE_FIREBASE_API_KEY=your_api_key
 VITE_FIREBASE_AUTH_DOMAIN=your-project.firebaseapp.com
 VITE_FIREBASE_PROJECT_ID=your-project-id
@@ -106,7 +106,8 @@ VITE_FIREBASE_MESSAGING_SENDER_ID=your_sender_id
 VITE_FIREBASE_APP_ID=your_app_id
 VITE_FIREBASE_DATABASE_URL=https://your-project.firebasedatabase.app
 VITE_OPENROUTER_API_KEY=your_openrouter_key
-\`\`\`
+```
+
 
 **Get Firebase credentials:**
 1. Go to [Firebase Console](https://console.firebase.google.com/)
@@ -118,7 +119,7 @@ VITE_OPENROUTER_API_KEY=your_openrouter_key
 
 ## 📁 Project Structure
 
-\`\`\`
+```
 SWEN360/
 ├── App/
 │   ├── carpooling-frontend/     # React + TypeScript app
@@ -136,25 +137,25 @@ SWEN360/
 │       └── firestore.rules      # Security rules
 │
 └── README.md
-\`\`\`
+```
 
 ---
 
 ## 🎯 Key Features Details
 
 ### Score System
-\`\`\`javascript
+```javascript
 score = (ridesJoined×5 + ridesCreated×8 + 
          passengersCarried×3 + fuelSaved×10 + 
          co2Saved×3) / 6
-\`\`\`
+```
 
 ### Environmental Impact
-\`\`\`javascript
+```javascript
 fuelSaved (L) = distance (km) / 14
 co2Saved (kg) = fuelSaved × 2.31
 moneySaved = fuelSaved × 0.20 BHD
-\`\`\`
+```
 
 ### Badges (10 Total)
 🏆 Trusted Driver | 🌿 Eco Driver | ⭐ Veteran Driver  
@@ -166,19 +167,19 @@ moneySaved = fuelSaved × 0.20 BHD
 ## 📦 Deployment
 
 ### Vercel (Frontend)
-\`\`\`bash
+```bash
 npm install -g vercel
 cd App/carpooling-frontend
 vercel
 # Add environment variables in Vercel dashboard
-\`\`\`
+```
 
 ### Firebase (Backend)
-\`\`\`bash
+```bash
 cd App/carpooling-backend/functions
 firebase deploy --only functions
 firebase deploy --only firestore:rules,database:rules
-\`\`\`
+```
 
 ---
 
@@ -204,16 +205,4 @@ firebase deploy --only firestore:rules,database:rules
 
 ---
 
-## 📄 License
 
-University coursework project - SWEN360
-
----
-
-## 🙏 Acknowledgments
-
-Firebase | OpenRouter | OpenStreetMap | React | Vite | TailwindCSS
-
----
-
-**Built with ❤️ for the university community**
