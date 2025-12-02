@@ -240,7 +240,7 @@ export const CleanJoinRidePage: React.FC = () => {
                   />
                   <CleanInput
                     type="number"
-                    placeholder="Max Cost"
+                    placeholder="Max Cost (BHD)"
                     value={filters.maxCost}
                     onChange={(e) => setFilters({ ...filters, maxCost: e.target.value })}
                   />

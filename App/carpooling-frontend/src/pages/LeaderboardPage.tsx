@@ -41,16 +41,15 @@ export const LeaderboardPage: React.FC = () => {
 
       // Get all users
       const usersSnapshot = await getDocs(collection(db, 'users'));
-      const users: LeaderboardUser[] = [];
 
-      // Calculate weekly stats for each user
-      for (const userDoc of usersSnapshot.docs) {
+      // Calculate weekly stats for all users in parallel (much faster!)
+      const userPromises = usersSnapshot.docs.map(async (userDoc) => {
         const userData = userDoc.data();
 
-        // Get weekly stats
+        // Get weekly stats in parallel
         const weeklyStats = await getWeeklyStats(userData.uid);
 
-        users.push({
+        return {
           uid: userData.uid,
           name: userData.name,
           role: userData.role || 'rider',
@@ -59,8 +58,10 @@ export const LeaderboardPage: React.FC = () => {
             weeklyScore: userData.stats?.weeklyScore || 0,
             co2Saved: weeklyStats.co2Saved || 0
           }
-        });
-      }
+        };
+      });
+
+      const users = await Promise.all(userPromises);
 
       // Sort by weekly score (descending) and take top 10
       const sortedUsers = users

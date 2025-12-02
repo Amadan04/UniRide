@@ -71,7 +71,7 @@ export const RideCard: React.FC<RideCardProps> = ({ ride, onJoin, onViewDetails,
           )}
         </div>
         <div className="text-right">
-          <div className="text-2xl font-bold text-teal-600">${ride.cost}</div>
+          <div className="text-2xl font-bold text-teal-600">{ride.cost} BHD</div>
           <div className="text-xs text-gray-500">per seat</div>
         </div>
       </div>

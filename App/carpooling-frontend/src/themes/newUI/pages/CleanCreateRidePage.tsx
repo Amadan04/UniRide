@@ -261,7 +261,7 @@ export const CleanCreateRidePage: React.FC = () => {
               </div>
 
               <div>
-                <label className={`block ${isDark ? 'text-gray-200' : 'text-gray-700'} mb-2 text-sm font-medium`}>Cost per Seat ($)</label>
+                <label className={`block ${isDark ? 'text-gray-200' : 'text-gray-700'} mb-2 text-sm font-medium`}>Cost per Seat (BHD)</label>
                 <CleanInput
                   type="number"
                   name="cost"
@@ -270,7 +270,7 @@ export const CleanCreateRidePage: React.FC = () => {
                   required
                   min="0"
                   step="0.01"
-                  placeholder="Cost per seat"
+                  placeholder="Cost per seat in BHD"
                   icon={<DollarSign className="w-5 h-5" />}
                 />
               </div>

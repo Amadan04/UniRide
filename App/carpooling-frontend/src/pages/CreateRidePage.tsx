@@ -278,7 +278,7 @@ export const CreateRidePage: React.FC = () => {
               </div>
 
               <div>
-                <label className="block text-cyan-300 mb-2 text-sm font-medium">Cost per Seat ($)</label>
+                <label className="block text-cyan-300 mb-2 text-sm font-medium">Cost per Seat (BHD)</label>
                 <div className="relative">
                   <DollarSign className="absolute left-3 top-1/2 -translate-y-1/2 w-5 h-5 text-cyan-400" />
                   <input
@@ -290,7 +290,7 @@ export const CreateRidePage: React.FC = () => {
                     min="0"
                     step="0.01"
                     className="w-full pl-12 pr-4 py-3 bg-white/5 border border-cyan-400/30 rounded-lg text-white placeholder-cyan-300/50 focus:outline-none focus:border-cyan-400 transition"
-                    placeholder="Cost per seat"
+                    placeholder="Cost per seat in BHD"
                   />
                 </div>
               </div>

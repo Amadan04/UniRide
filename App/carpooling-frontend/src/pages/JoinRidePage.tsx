@@ -340,7 +340,7 @@ export const JoinRidePage: React.FC = () => {
                   />
                 </div>
                 <div>
-                  <label className="block text-cyan-300 text-sm mb-2">Max Cost ($)</label>
+                  <label className="block text-cyan-300 text-sm mb-2">Max Cost (BHD)</label>
                   <input
                     type="number"
                     placeholder="Any"
@@ -427,7 +427,7 @@ export const JoinRidePage: React.FC = () => {
                     )}
                     {filters.maxCost && (
                       <span className="px-3 py-1 bg-cyan-500/20 border border-cyan-400/30 rounded-full text-cyan-300 text-xs">
-                        Max: ${filters.maxCost}
+                        Max: {filters.maxCost} BHD
                       </span>
                     )}
                     {filters.gender && (
@@ -553,7 +553,7 @@ export const JoinRidePage: React.FC = () => {
                       </p>
                     )}
                   </div>
-                  <div className="text-2xl font-bold text-cyan-400">${ride.cost}</div>
+                  <div className="text-2xl font-bold text-cyan-400">{ride.cost} BHD</div>
                 </div>
 
                 <div className="space-y-3 mb-4">

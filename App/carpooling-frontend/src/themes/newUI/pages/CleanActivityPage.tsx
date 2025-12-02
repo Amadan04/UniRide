@@ -453,7 +453,7 @@ export const CleanActivityPage: React.FC = () => {
         </div>
 
         <div className={isDark ? 'text-gray-400' : 'text-gray-600'}>
-          <span className={`text-2xl font-bold ${isDark ? 'text-gray-100' : 'text-gray-900'}`}>${ride.cost}</span> per seat
+          <span className={`text-2xl font-bold ${isDark ? 'text-gray-100' : 'text-gray-900'}`}>{ride.cost} BHD</span> per seat
         </div>
       </div>
 
@@ -720,7 +720,7 @@ export const CleanActivityPage: React.FC = () => {
               {editMode ? (
                 <div className="space-y-3 mb-4">
                   <div>
-                    <label className={`block text-sm mb-1 ${isDark ? 'text-gray-300' : 'text-gray-700'}`}>Cost ($)</label>
+                    <label className={`block text-sm mb-1 ${isDark ? 'text-gray-300' : 'text-gray-700'}`}>Cost (BHD)</label>
                     <input
                       type="number"
                       value={editCost}

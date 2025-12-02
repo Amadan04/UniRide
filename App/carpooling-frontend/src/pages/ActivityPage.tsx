@@ -481,7 +481,7 @@ export const ActivityPage: React.FC = () => {
         </div>
 
         <div className="text-cyan-300">
-          <span className="text-2xl font-bold text-white">${ride.cost}</span> per seat
+          <span className="text-2xl font-bold text-white">{ride.cost} BHD</span> per seat
         </div>
       </div>
 
@@ -761,7 +761,7 @@ export const ActivityPage: React.FC = () => {
               {editMode ? (
                 <div className="space-y-3 mb-4">
                   <div>
-                    <label className="block text-cyan-300 text-sm mb-1">Cost ($)</label>
+                    <label className="block text-cyan-300 text-sm mb-1">Cost (BHD)</label>
                     <input
                       type="number"
                       value={editCost}
