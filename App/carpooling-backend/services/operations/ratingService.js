@@ -297,7 +297,7 @@ export const canUserRate = async (rideID, fromUserID, toUserID) => {
     }
 
     const rideData = rideDoc.data();
-
+// if the ride isnt completed the riderr wont be allowed to rate.
     if (rideData.status !== 'completed') {
       return {
         canRate: false,
@@ -332,7 +332,7 @@ export const canUserRate = async (rideID, fromUserID, toUserID) => {
       where('fromUserID', '==', fromUserID),
       where('toUserID', '==', toUserID)
     );
-
+     // If already rated, the user will be ifnormed that he already rated.
     const existingRatings = await getDocs(existingRatingQuery);
     if (!existingRatings.empty) {
       return {
@@ -476,6 +476,7 @@ export const getRatingStats = async (userID) => {
         recentRatings: ratings.slice(0, 5)
       }
     };
+    // Catching errors in the rating befire saving,, Either firebase or user account delteed but still shows in UI(Needs testing)
   } catch (error) {
     console.error('Error getting rating stats:', error);
     throw new Error('Failed to fetch rating statistics');

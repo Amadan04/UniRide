@@ -45,6 +45,8 @@
       }
     },
     
+
+    
     "chats": {
       "$rideID": {
         ".read": "auth != null",

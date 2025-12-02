@@ -13,6 +13,10 @@ interface UserData {
   university?: string;
   profileImage?: string;
   rating?: number;
+  preferences?: {
+    theme?: 'neon' | 'clean';
+    colorMode?: 'light' | 'dark';
+  };
 }
 
 interface AuthContextType {

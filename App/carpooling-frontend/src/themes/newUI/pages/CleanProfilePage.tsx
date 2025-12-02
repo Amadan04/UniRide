@@ -3,20 +3,20 @@ import { useNavigate } from 'react-router-dom';
 import { motion } from 'framer-motion';
 import { doc, updateDoc } from 'firebase/firestore';
 import { updatePassword } from 'firebase/auth';
-import { db, auth, storage } from '../firebase';
-import { useAuth } from '../context/AuthContext';
+import { db, auth, storage } from '../../../firebase';
+import { useAuth } from '../../../context/AuthContext';
 import { User, Mail, Calendar, GraduationCap, Star, ArrowLeft, Save, Camera, Loader, Palette, Sun, Moon } from 'lucide-react';
-import { pageTransition, scaleIn } from '../animations/motionVariants';
-import { useToast } from '../context/ToastContext';
+import { useToast } from '../../../context/ToastContext';
 import { ref, uploadBytes, getDownloadURL } from 'firebase/storage';
-import { useUITheme } from '../context/UIThemeContext';
+import { CleanCard } from '../components/CleanCard';
+import { CleanButton } from '../components/CleanButton';
+import { CleanInput } from '../components/CleanInput';
+import { useUITheme } from '../../../context/UIThemeContext';
 
-
-
-export const ProfilePage: React.FC = () => {
+export const CleanProfilePage: React.FC = () => {
   const { userData, currentUser, refreshUserData } = useAuth();
   const navigate = useNavigate();
-  const { theme, colorMode, setTheme, setColorMode, savePreferencesToDatabase } = useUITheme();
+  const { isDark, theme, colorMode, setTheme, setColorMode, savePreferencesToDatabase } = useUITheme();
   const [editing, setEditing] = useState(false);
   const [loading, setLoading] = useState(false);
   const toast = useToast();
@@ -60,18 +60,14 @@ export const ProfilePage: React.FC = () => {
     const file = e.target.files?.[0];
     if (!file || !userData) return;
 
-    // Validate file type
     if (!file.type.startsWith('image/')) {
       toast.error('Please select an image file');
-      // Reset input
       e.target.value = '';
       return;
     }
 
-    // Validate file size (max 5MB)
     if (file.size > 5 * 1024 * 1024) {
       toast.error('Image size must be less than 5MB');
-      // Reset input
       e.target.value = '';
       return;
     }
@@ -94,7 +90,6 @@ export const ProfilePage: React.FC = () => {
       toast.error(error?.message || 'Failed to upload avatar. Please try again.');
     } finally {
       setUploading(false);
-      // Reset input to allow re-uploading the same file if needed
       e.target.value = '';
     }
   };
@@ -106,6 +101,7 @@ export const ProfilePage: React.FC = () => {
   const handleThemeChange = async (newTheme: 'neon' | 'clean') => {
     setTheme(newTheme);
     if (userData?.uid) {
+      // Save immediately to database
       setTimeout(async () => {
         await savePreferencesToDatabase(userData.uid);
         toast.success(`Theme changed to ${newTheme === 'neon' ? 'Neon' : 'Clean'}!`);
@@ -116,6 +112,7 @@ export const ProfilePage: React.FC = () => {
   const handleColorModeChange = async (newMode: 'light' | 'dark') => {
     setColorMode(newMode);
     if (userData?.uid) {
+      // Save immediately to database
       setTimeout(async () => {
         await savePreferencesToDatabase(userData.uid);
         toast.success(`${newMode === 'dark' ? 'Dark' : 'Light'} mode enabled!`);
@@ -125,36 +122,30 @@ export const ProfilePage: React.FC = () => {
 
   if (!userData) {
     return (
-      <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-slate-900 to-blue-900">
-        <div className="animate-spin rounded-full h-16 w-16 border-t-2 border-b-2 border-cyan-400"></div>
+      <div className={`min-h-screen flex items-center justify-center ${isDark ? 'bg-gray-900' : 'bg-gray-50'}`}>
+        <div className="animate-spin rounded-full h-16 w-16 border-4 border-teal-500 border-t-transparent"></div>
       </div>
     );
   }
 
   return (
-    <motion.div
-      className="min-h-screen bg-gradient-to-br from-slate-900 to-blue-900 dark:from-slate-950 dark:to-blue-950 py-12 px-4"
-      {...pageTransition}
-    >
+    <div className={`min-h-screen ${isDark ? 'bg-gray-900' : 'bg-gray-50'} py-12 px-4`}>
       <div className="max-w-2xl mx-auto">
         <button
           onClick={() => navigate('/')}
-          className="flex items-center gap-2 text-cyan-400 hover:text-cyan-300 mb-6 transition"
+          className="flex items-center gap-2 text-teal-600 hover:text-teal-700 mb-6 transition"
         >
           <ArrowLeft className="w-5 h-5" />
           Back to Home
         </button>
 
-        <motion.div
-          className="backdrop-blur-xl bg-white/10 border border-cyan-400/30 rounded-2xl shadow-2xl p-8"
-          {...scaleIn}
-        >
+        <CleanCard padding="lg">
           <div className="flex flex-col items-center justify-center mb-6">
             <div className="relative group">
-              <div className="w-24 h-24 bg-gradient-to-br from-cyan-400 to-blue-500 rounded-full flex items-center justify-center overflow-hidden">
+              <div className="w-24 h-24 bg-gradient-to-br from-teal-400 to-blue-500 rounded-full flex items-center justify-center overflow-hidden">
                 {userData.profileImage ? (
-                  <img 
-                    src={userData.profileImage} 
+                  <img
+                    src={userData.profileImage}
                     alt={userData.name}
                     className="w-full h-full object-cover"
                   />
@@ -162,9 +153,8 @@ export const ProfilePage: React.FC = () => {
                   <User className="w-12 h-12 text-white" />
                 )}
               </div>
-              
-              {/* Upload overlay */}
-              <label 
+
+              <label
                 htmlFor="avatar-upload"
                 className="absolute inset-0 bg-black/60 rounded-full flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity cursor-pointer"
               >
@@ -174,7 +164,7 @@ export const ProfilePage: React.FC = () => {
                   <Camera className="w-6 h-6 text-white" />
                 )}
               </label>
-              
+
               <input
                 id="avatar-upload"
                 type="file"
@@ -184,235 +174,226 @@ export const ProfilePage: React.FC = () => {
                 className="hidden"
               />
             </div>
-            
+
             {uploading && (
-              <p className="text-cyan-300 text-sm mt-2">Uploading...</p>
+              <p className="text-teal-600 text-sm mt-2">Uploading...</p>
             )}
-            
+
             {!uploading && (
-              <p className="text-cyan-300/70 text-xs mt-2">Click to upload avatar</p>
+              <p className={`${isDark ? 'text-gray-400' : 'text-gray-500'} text-xs mt-2`}>Click to upload avatar</p>
             )}
           </div>
 
-          <h1 className="text-4xl font-bold text-white text-center mb-2">{userData.name}</h1>
-          <p className="text-cyan-300 text-center mb-6 capitalize">{userData.role}</p>
+          <h1 className={`text-4xl font-bold ${isDark ? 'text-gray-100' : 'text-gray-900'} text-center mb-2`}>{userData.name}</h1>
+          <p className={`${isDark ? 'text-gray-400' : 'text-gray-600'} text-center mb-6 capitalize`}>{userData.role}</p>
 
           <div className="flex items-center justify-center gap-2 mb-8">
             <Star className="w-6 h-6 text-yellow-400 fill-yellow-400" />
-            <span className="text-2xl font-bold text-white">{userData.avgRating?.toFixed(1) || '5.0'}</span>
-            <span className="text-cyan-300">
+            <span className={`text-2xl font-bold ${isDark ? 'text-gray-100' : 'text-gray-900'}`}>{userData.avgRating?.toFixed(1) || '5.0'}</span>
+            <span className={`${isDark ? 'text-gray-400' : 'text-gray-600'}`}>
               ({userData.ratingsCount || 0} ratings)
             </span>
           </div>
 
           {!editing ? (
             <div className="space-y-4">
-              <div className="flex items-center gap-3 p-4 bg-white/5 rounded-lg border border-cyan-400/20">
-                <Mail className="w-5 h-5 text-cyan-400" />
+              <div className={`flex items-center gap-3 p-4 ${isDark ? 'bg-gray-700' : 'bg-gray-50'} rounded-lg border ${isDark ? 'border-gray-600' : 'border-gray-200'}`}>
+                <Mail className="w-5 h-5 text-teal-500" />
                 <div>
-                  <p className="text-cyan-300 text-sm">Email</p>
-                  <p className="text-white">{userData.email}</p>
+                  <p className={`${isDark ? 'text-gray-400' : 'text-gray-600'} text-sm`}>Email</p>
+                  <p className={`${isDark ? 'text-gray-100' : 'text-gray-900'}`}>{userData.email}</p>
                 </div>
               </div>
 
-              <div className="flex items-center gap-3 p-4 bg-white/5 rounded-lg border border-cyan-400/20">
-                <Calendar className="w-5 h-5 text-cyan-400" />
+              <div className={`flex items-center gap-3 p-4 ${isDark ? 'bg-gray-700' : 'bg-gray-50'} rounded-lg border ${isDark ? 'border-gray-600' : 'border-gray-200'}`}>
+                <Calendar className="w-5 h-5 text-teal-500" />
                 <div>
-                  <p className="text-cyan-300 text-sm">Age</p>
-                  <p className="text-white">{userData.age}</p>
+                  <p className={`${isDark ? 'text-gray-400' : 'text-gray-600'} text-sm`}>Age</p>
+                  <p className={`${isDark ? 'text-gray-100' : 'text-gray-900'}`}>{userData.age}</p>
                 </div>
               </div>
 
-              <div className="flex items-center gap-3 p-4 bg-white/5 rounded-lg border border-cyan-400/20">
-                <User className="w-5 h-5 text-cyan-400" />
+              <div className={`flex items-center gap-3 p-4 ${isDark ? 'bg-gray-700' : 'bg-gray-50'} rounded-lg border ${isDark ? 'border-gray-600' : 'border-gray-200'}`}>
+                <User className="w-5 h-5 text-teal-500" />
                 <div>
-                  <p className="text-cyan-300 text-sm">Gender</p>
-                  <p className="text-white capitalize">{userData.gender}</p>
+                  <p className={`${isDark ? 'text-gray-400' : 'text-gray-600'} text-sm`}>Gender</p>
+                  <p className={`${isDark ? 'text-gray-100' : 'text-gray-900'} capitalize`}>{userData.gender}</p>
                 </div>
               </div>
 
-              <div className="flex items-center gap-3 p-4 bg-white/5 rounded-lg border border-cyan-400/20">
-                <GraduationCap className="w-5 h-5 text-cyan-400" />
+              <div className={`flex items-center gap-3 p-4 ${isDark ? 'bg-gray-700' : 'bg-gray-50'} rounded-lg border ${isDark ? 'border-gray-600' : 'border-gray-200'}`}>
+                <GraduationCap className="w-5 h-5 text-teal-500" />
                 <div>
-                  <p className="text-cyan-300 text-sm">University</p>
-                  <p className="text-white">{userData.university}</p>
+                  <p className={`${isDark ? 'text-gray-400' : 'text-gray-600'} text-sm`}>University</p>
+                  <p className={`${isDark ? 'text-gray-100' : 'text-gray-900'}`}>{userData.university}</p>
                 </div>
               </div>
 
               {/* Theme Preferences */}
-              <div className="p-4 bg-white/5 rounded-lg border border-cyan-400/20 space-y-4">
+              <div className={`p-4 ${isDark ? 'bg-gray-700' : 'bg-gray-50'} rounded-lg border ${isDark ? 'border-gray-600' : 'border-gray-200'} space-y-4`}>
                 <div className="flex items-center gap-3 mb-3">
-                  <Palette className="w-5 h-5 text-cyan-400" />
-                  <p className="text-cyan-300 font-semibold">Theme Preferences</p>
+                  <Palette className="w-5 h-5 text-teal-500" />
+                  <p className={`${isDark ? 'text-gray-200' : 'text-gray-700'} font-semibold`}>Theme Preferences</p>
                 </div>
 
                 {/* UI Theme Selection */}
                 <div>
-                  <p className="text-cyan-300/70 text-sm mb-2">UI Theme</p>
+                  <p className={`${isDark ? 'text-gray-400' : 'text-gray-600'} text-sm mb-2`}>UI Theme</p>
                   <div className="grid grid-cols-2 gap-2">
-                    <motion.button
+                    <button
                       onClick={() => handleThemeChange('neon')}
                       className={`p-3 rounded-lg border-2 transition ${
                         theme === 'neon'
-                          ? 'border-cyan-400 bg-cyan-400/10'
-                          : 'border-cyan-400/30 bg-white/5 hover:border-cyan-400/50'
+                          ? 'border-teal-500 bg-teal-500/10'
+                          : isDark
+                          ? 'border-gray-600 bg-gray-800 hover:border-gray-500'
+                          : 'border-gray-200 bg-white hover:border-gray-300'
                       }`}
-                      whileHover={{ scale: 1.02 }}
-                      whileTap={{ scale: 0.98 }}
                     >
-                      <p className={`font-semibold ${theme === 'neon' ? 'text-cyan-400' : 'text-white'}`}>
+                      <p className={`font-semibold ${theme === 'neon' ? 'text-teal-500' : isDark ? 'text-gray-200' : 'text-gray-700'}`}>
                         ✨ Neon
                       </p>
-                      <p className="text-xs text-cyan-300/70">Vibrant & Bold</p>
-                    </motion.button>
+                      <p className={`text-xs ${isDark ? 'text-gray-400' : 'text-gray-500'}`}>Vibrant & Bold</p>
+                    </button>
 
-                    <motion.button
+                    <button
                       onClick={() => handleThemeChange('clean')}
                       className={`p-3 rounded-lg border-2 transition ${
                         theme === 'clean'
-                          ? 'border-cyan-400 bg-cyan-400/10'
-                          : 'border-cyan-400/30 bg-white/5 hover:border-cyan-400/50'
+                          ? 'border-teal-500 bg-teal-500/10'
+                          : isDark
+                          ? 'border-gray-600 bg-gray-800 hover:border-gray-500'
+                          : 'border-gray-200 bg-white hover:border-gray-300'
                       }`}
-                      whileHover={{ scale: 1.02 }}
-                      whileTap={{ scale: 0.98 }}
                     >
-                      <p className={`font-semibold ${theme === 'clean' ? 'text-cyan-400' : 'text-white'}`}>
+                      <p className={`font-semibold ${theme === 'clean' ? 'text-teal-500' : isDark ? 'text-gray-200' : 'text-gray-700'}`}>
                         🎨 Clean
                       </p>
-                      <p className="text-xs text-cyan-300/70">Simple & Modern</p>
-                    </motion.button>
+                      <p className={`text-xs ${isDark ? 'text-gray-400' : 'text-gray-500'}`}>Simple & Modern</p>
+                    </button>
                   </div>
                 </div>
 
                 {/* Color Mode Selection */}
                 <div>
-                  <p className="text-cyan-300/70 text-sm mb-2">Color Mode</p>
+                  <p className={`${isDark ? 'text-gray-400' : 'text-gray-600'} text-sm mb-2`}>Color Mode</p>
                   <div className="grid grid-cols-2 gap-2">
-                    <motion.button
+                    <button
                       onClick={() => handleColorModeChange('light')}
                       className={`p-3 rounded-lg border-2 transition flex items-center justify-center gap-2 ${
                         colorMode === 'light'
-                          ? 'border-cyan-400 bg-cyan-400/10'
-                          : 'border-cyan-400/30 bg-white/5 hover:border-cyan-400/50'
+                          ? 'border-teal-500 bg-teal-500/10'
+                          : isDark
+                          ? 'border-gray-600 bg-gray-800 hover:border-gray-500'
+                          : 'border-gray-200 bg-white hover:border-gray-300'
                       }`}
-                      whileHover={{ scale: 1.02 }}
-                      whileTap={{ scale: 0.98 }}
                     >
-                      <Sun className={`w-5 h-5 ${colorMode === 'light' ? 'text-cyan-400' : 'text-cyan-300/70'}`} />
-                      <p className={`font-semibold ${colorMode === 'light' ? 'text-cyan-400' : 'text-white'}`}>
+                      <Sun className={`w-5 h-5 ${colorMode === 'light' ? 'text-teal-500' : isDark ? 'text-gray-400' : 'text-gray-600'}`} />
+                      <p className={`font-semibold ${colorMode === 'light' ? 'text-teal-500' : isDark ? 'text-gray-200' : 'text-gray-700'}`}>
                         Light
                       </p>
-                    </motion.button>
+                    </button>
 
-                    <motion.button
+                    <button
                       onClick={() => handleColorModeChange('dark')}
                       className={`p-3 rounded-lg border-2 transition flex items-center justify-center gap-2 ${
                         colorMode === 'dark'
-                          ? 'border-cyan-400 bg-cyan-400/10'
-                          : 'border-cyan-400/30 bg-white/5 hover:border-cyan-400/50'
+                          ? 'border-teal-500 bg-teal-500/10'
+                          : isDark
+                          ? 'border-gray-600 bg-gray-800 hover:border-gray-500'
+                          : 'border-gray-200 bg-white hover:border-gray-300'
                       }`}
-                      whileHover={{ scale: 1.02 }}
-                      whileTap={{ scale: 0.98 }}
                     >
-                      <Moon className={`w-5 h-5 ${colorMode === 'dark' ? 'text-cyan-400' : 'text-cyan-300/70'}`} />
-                      <p className={`font-semibold ${colorMode === 'dark' ? 'text-cyan-400' : 'text-white'}`}>
+                      <Moon className={`w-5 h-5 ${colorMode === 'dark' ? 'text-teal-500' : isDark ? 'text-gray-400' : 'text-gray-600'}`} />
+                      <p className={`font-semibold ${colorMode === 'dark' ? 'text-teal-500' : isDark ? 'text-gray-200' : 'text-gray-700'}`}>
                         Dark
                       </p>
-                    </motion.button>
+                    </button>
                   </div>
                 </div>
 
-                <p className="text-xs text-cyan-300/50 mt-2">
+                <p className={`text-xs ${isDark ? 'text-gray-500' : 'text-gray-400'} mt-2`}>
                   Your theme preferences are saved automatically and will sync across all devices.
                 </p>
               </div>
 
-              <motion.button
+              <CleanButton
                 onClick={() => setEditing(true)}
-                className="w-full py-3 bg-gradient-to-r from-cyan-500 to-blue-500 text-white font-semibold rounded-lg shadow-lg hover:shadow-cyan-500/50 transition"
-                whileHover={{ scale: 1.02 }}
-                whileTap={{ scale: 0.98 }}
+                fullWidth
+                size="lg"
               >
                 Edit Profile
-              </motion.button>
+              </CleanButton>
             </div>
           ) : (
             <form onSubmit={handleSubmit} className="space-y-4">
               <div>
-                <label className="block text-cyan-300 mb-2 text-sm">Name</label>
-                <input
+                <label className={`block ${isDark ? 'text-gray-200' : 'text-gray-700'} mb-2 text-sm`}>Name</label>
+                <CleanInput
                   type="text"
                   name="name"
                   value={formData.name}
                   onChange={handleChange}
                   required
-                  className="w-full px-4 py-3 bg-white/5 border border-cyan-400/30 rounded-lg text-white focus:outline-none focus:border-cyan-400 transition"
                 />
               </div>
 
               <div>
-                <label className="block text-cyan-300 mb-2 text-sm">Age</label>
-                <input
+                <label className={`block ${isDark ? 'text-gray-200' : 'text-gray-700'} mb-2 text-sm`}>Age</label>
+                <CleanInput
                   type="number"
                   name="age"
                   value={formData.age}
                   onChange={handleChange}
                   required
-                  className="w-full px-4 py-3 bg-white/5 border border-cyan-400/30 rounded-lg text-white focus:outline-none focus:border-cyan-400 transition"
                 />
               </div>
 
               <div>
-                <label className="block text-cyan-300 mb-2 text-sm">University</label>
-                <input
+                <label className={`block ${isDark ? 'text-gray-200' : 'text-gray-700'} mb-2 text-sm`}>University</label>
+                <CleanInput
                   type="text"
                   name="university"
                   value={formData.university}
                   onChange={handleChange}
                   required
-                  className="w-full px-4 py-3 bg-white/5 border border-cyan-400/30 rounded-lg text-white focus:outline-none focus:border-cyan-400 transition"
                 />
               </div>
 
               <div>
-                <label className="block text-cyan-300 mb-2 text-sm">
+                <label className={`block ${isDark ? 'text-gray-200' : 'text-gray-700'} mb-2 text-sm`}>
                   New Password (leave blank to keep current)
                 </label>
-                <input
+                <CleanInput
                   type="password"
                   name="newPassword"
                   value={formData.newPassword}
                   onChange={handleChange}
-                  className="w-full px-4 py-3 bg-white/5 border border-cyan-400/30 rounded-lg text-white focus:outline-none focus:border-cyan-400 transition"
                 />
               </div>
 
               <div className="flex gap-3">
-                <motion.button
+                <CleanButton
                   type="submit"
                   disabled={loading}
-                  className="flex-1 py-3 bg-gradient-to-r from-cyan-500 to-blue-500 text-white font-semibold rounded-lg disabled:opacity-50"
-                  whileHover={{ scale: loading ? 1 : 1.02 }}
-                  whileTap={{ scale: loading ? 1 : 0.98 }}
+                  className="flex-1"
                 >
                   <Save className="w-5 h-5 inline mr-2" />
                   {loading ? 'Saving...' : 'Save Changes'}
-                </motion.button>
+                </CleanButton>
 
-                <motion.button
+                <button
                   type="button"
                   onClick={() => setEditing(false)}
-                  className="px-6 py-3 bg-white/5 border border-cyan-400/30 text-cyan-400 rounded-lg"
-                  whileHover={{ scale: 1.02 }}
-                  whileTap={{ scale: 0.98 }}
+                  className={`px-6 py-3 ${isDark ? 'bg-gray-700 border-gray-600 text-gray-200 hover:bg-gray-600' : 'bg-white border-gray-200 text-gray-700 hover:bg-gray-50'} border rounded-lg transition`}
                 >
                   Cancel
-                </motion.button>
+                </button>
               </div>
             </form>
           )}
-        </motion.div>
+        </CleanCard>
       </div>
-    </motion.div>
+    </div>
   );
 };

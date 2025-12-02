@@ -54,6 +54,12 @@
 - Weekly leaderboard
 - Environmental impact tracking
 
+### 🎨 **Theme Customization**
+- Dual theme system (Neon/Clean)
+- Light/Dark mode support
+- Cross-device preference sync
+- Persistent theme settings via Firebase
+
 ---
 
 ## 🛠️ Tech Stack

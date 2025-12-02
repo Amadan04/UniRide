@@ -163,7 +163,7 @@ export const UserStatsPage: React.FC = () => {
                 <span>•</span>
                 <div className="flex items-center gap-1">
                   <Star className="w-4 h-4 text-yellow-400 fill-yellow-400" />
-                  <span>{userData.avgRating.toFixed(1)}</span>
+                  <span>{userData.avgRating?.toFixed(1) || '5.0'}</span>
                 </div>
               </div>
             </div>
