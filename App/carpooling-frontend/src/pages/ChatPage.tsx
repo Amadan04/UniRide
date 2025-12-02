@@ -7,6 +7,8 @@ import { rtdb, db } from '../firebase';
 import { useAuth } from '../context/AuthContext';
 import { Send, ArrowLeft, Map, Users, X } from 'lucide-react';
 import { messageVariant, pageTransition } from '../animations/motionVariants';
+import { checkMessageProfanity } from '../utils/profanityFilter';
+import { useToast } from '../context/ToastContext';
 
 
 interface Message {
@@ -32,6 +34,7 @@ export const ChatPage: React.FC = () => {
   const { rideID } = useParams<{ rideID: string }>();
   const { userData } = useAuth();
   const navigate = useNavigate();
+  const { toast } = useToast();
 
   const [messages, setMessages] = useState<Message[]>([]);
   const [newMessage, setNewMessage] = useState('');
@@ -157,7 +160,14 @@ export const ChatPage: React.FC = () => {
 
     const messageText = newMessage.trim();
     if (messageText.length > 1000) {
-      console.warn('Message too long (max 1000 characters)');
+      toast.error('Message too long (max 1000 characters)');
+      return;
+    }
+
+    // Check for profanity
+    const profanityCheck = checkMessageProfanity(messageText);
+    if (profanityCheck.isProfane) {
+      toast.error(profanityCheck.message);
       return;
     }
 
@@ -185,6 +195,7 @@ export const ChatPage: React.FC = () => {
       setNewMessage('');
     } catch (error) {
       console.error('Error sending message:', error);
+      toast.error('Failed to send message. Please try again.');
     }
   };
 

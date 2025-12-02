@@ -10,6 +10,7 @@ import { collection, query, where, getDocs, doc, setDoc, updateDoc, deleteDoc } 
 import { updateUserStats } from '../../../services/scoreService';
 import { CleanCard } from '../components/CleanCard';
 import { CleanButton } from '../components/CleanButton';
+import { checkMessageProfanity } from '../../../utils/profanityFilter';
 
 interface Ride {
   id: string;
@@ -381,6 +382,15 @@ export const CleanActivityPage: React.FC = () => {
 
   const handleSubmitRating = async (rideId: string) => {
     if (!userData) return;
+
+    // Check for profanity in review text
+    if (review.trim()) {
+      const profanityCheck = checkMessageProfanity(review);
+      if (profanityCheck.isProfane) {
+        toast.error(profanityCheck.message);
+        return;
+      }
+    }
 
     try {
       const existingRatingQuery = query(

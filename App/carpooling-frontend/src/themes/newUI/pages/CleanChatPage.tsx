@@ -9,6 +9,8 @@ import { useUITheme } from '../../../context/UIThemeContext';
 import { Send, ArrowLeft, Map, Users, X } from 'lucide-react';
 import { CleanCard } from '../components/CleanCard';
 import { CleanButton } from '../components/CleanButton';
+import { checkMessageProfanity } from '../../../utils/profanityFilter';
+import { useToast } from '../../../context/ToastContext';
 
 interface Message {
   id: string;
@@ -33,6 +35,7 @@ export const CleanChatPage: React.FC = () => {
   const { userData } = useAuth();
   const { isDark } = useUITheme();
   const navigate = useNavigate();
+  const { toast } = useToast();
 
   const [messages, setMessages] = useState<Message[]>([]);
   const [newMessage, setNewMessage] = useState('');
@@ -146,7 +149,14 @@ export const CleanChatPage: React.FC = () => {
 
     const messageText = newMessage.trim();
     if (messageText.length > 1000) {
-      console.warn('Message too long (max 1000 characters)');
+      toast.error('Message too long (max 1000 characters)');
+      return;
+    }
+
+    // Check for profanity
+    const profanityCheck = checkMessageProfanity(messageText);
+    if (profanityCheck.isProfane) {
+      toast.error(profanityCheck.message);
       return;
     }
 
@@ -171,6 +181,7 @@ export const CleanChatPage: React.FC = () => {
       setNewMessage('');
     } catch (error) {
       console.error('Error sending message:', error);
+      toast.error('Failed to send message. Please try again.');
     }
   };
 

@@ -8,6 +8,7 @@ import { pageTransition, staggerContainer, scaleIn } from '../animations/motionV
 import { useToast } from '../context/ToastContext';
 import { collection, query, where, getDocs, doc, setDoc, updateDoc, deleteDoc } from 'firebase/firestore';
 import { updateUserStats } from '../services/scoreService';
+import { checkMessageProfanity } from '../utils/profanityFilter';
 
 interface Ride {
   id: string;
@@ -389,6 +390,15 @@ export const ActivityPage: React.FC = () => {
 
   const handleSubmitRating = async (rideId: string) => {
     if (!userData) return;
+
+    // Check for profanity in review text
+    if (review.trim()) {
+      const profanityCheck = checkMessageProfanity(review);
+      if (profanityCheck.isProfane) {
+        toast.error(profanityCheck.message);
+        return;
+      }
+    }
 
     try {
       // Check if user has already rated this ride
