@@ -19,6 +19,7 @@ import { LiveTrackingPage } from './pages/LiveTrackingPage';
 import { LiveTrackingDemoPage } from './pages/LiveTrackingDemoPage';
 import { UserStatsPage } from './pages/UserStatsPage';
 import { LeaderboardPage } from './pages/LeaderboardPage';
+import { ForgotPasswordPage } from './pages/ForgotPasswordPage';
 import { FloatingChatButton } from './components/FloatingChatButton';
 import { ToastProvider } from './context/ToastContext';
 
@@ -38,6 +39,7 @@ function App() {
           <AnimatePresence mode="wait">
             <Routes>
               <Route path="/auth" element={<AuthPage />} />
+              <Route path="/forgot-password" element={<ForgotPasswordPage />} />
 
               <Route
                 path="/"

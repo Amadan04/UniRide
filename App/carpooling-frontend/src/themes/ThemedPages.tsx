@@ -12,6 +12,7 @@ import { ActivityPage as NeonActivityPage } from '../pages/ActivityPage';
 import { AIAssistantPage as NeonAIAssistantPage } from '../pages/AIAssistantPage';
 import { ClassSchedulePage as NeonClassSchedulePage } from '../pages/ClassSchedulePage';
 import { LeaderboardPage as NeonLeaderboardPage } from '../pages/LeaderboardPage';
+import { ForgotPasswordPage as NeonForgotPasswordPage } from '../pages/ForgotPasswordPage';
 
 // Clean theme pages (new)
 import { CleanHomePage } from './newUI/pages/CleanHomePage';
@@ -24,6 +25,7 @@ import { CleanActivityPage } from './newUI/pages/CleanActivityPage';
 import { CleanAIAssistantPage } from './newUI/pages/CleanAIAssistantPage';
 import { CleanClassSchedulePage } from './newUI/pages/CleanClassSchedulePage';
 import { CleanLeaderboardPage } from './newUI/pages/CleanLeaderboardPage';
+import { CleanForgotPasswordPage } from './newUI/pages/CleanForgotPasswordPage';
 
 // Themed page exports
 export const ThemedHomePage = () => {
@@ -74,6 +76,11 @@ export const ThemedClassSchedulePage = () => {
 export const ThemedLeaderboardPage = () => {
   const { theme } = useUITheme();
   return theme === 'clean' ? <CleanLeaderboardPage /> : <NeonLeaderboardPage />;
+};
+
+export const ThemedForgotPasswordPage = () => {
+  const { theme } = useUITheme();
+  return theme === 'clean' ? <CleanForgotPasswordPage /> : <NeonForgotPasswordPage />;
 };
 
 // Pages that don't have clean versions yet (use neon only)

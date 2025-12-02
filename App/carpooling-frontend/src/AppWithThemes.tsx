@@ -21,6 +21,7 @@ import {
   ThemedAIAssistantPage,
   ThemedClassSchedulePage,
   ThemedLeaderboardPage,
+  ThemedForgotPasswordPage,
   MapPage,
   LiveTrackingPage,
   LiveTrackingDemoPage,
@@ -44,6 +45,7 @@ function AppWithThemes() {
             <AnimatePresence mode="wait">
               <Routes>
                   <Route path="/auth" element={<ThemedAuthPage />} />
+                  <Route path="/forgot-password" element={<ThemedForgotPasswordPage />} />
 
                   <Route
                     path="/"

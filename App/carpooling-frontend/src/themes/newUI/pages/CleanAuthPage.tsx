@@ -257,6 +257,18 @@ export const CleanAuthPage: React.FC = () => {
               )}
             </div>
 
+            {isLogin && (
+              <div className="flex justify-end">
+                <button
+                  type="button"
+                  onClick={() => navigate('/forgot-password')}
+                  className={`text-sm transition ${isDark ? 'text-teal-400 hover:text-teal-300' : 'text-teal-600 hover:text-teal-700'}`}
+                >
+                  Forgot Password?
+                </button>
+              </div>
+            )}
+
             {!isLogin && (
               <>
                 <CleanInput

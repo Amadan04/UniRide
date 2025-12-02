@@ -410,6 +410,18 @@ export const AuthPage: React.FC = () => {
               )}
             </div>
 
+            {isLogin && (
+              <div className="flex justify-end">
+                <button
+                  type="button"
+                  onClick={() => navigate('/forgot-password')}
+                  className="text-sm text-cyan-400 hover:text-cyan-300 transition"
+                >
+                  Forgot Password?
+                </button>
+              </div>
+            )}
+
             {!isLogin && (
               <>
                 <div className="relative">
