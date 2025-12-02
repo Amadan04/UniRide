@@ -15,7 +15,7 @@ import { db } from '../firebase';
 
 export const ClassSchedulePage: React.FC = () => {
   const navigate = useNavigate();
-  const { currentUser, userData } = useAuth();
+  const { currentUser, userData, refreshUserData } = useAuth();
   const [schedule, setSchedule] = useState<WeeklySchedule>(getEmptySchedule());
   const [isLoading, setIsLoading] = useState(false);
   const [editCommand, setEditCommand] = useState('');
@@ -94,6 +94,9 @@ export const ClassSchedulePage: React.FC = () => {
       await updateDoc(userDocRef, {
         classSchedule: schedule
       });
+
+      // Refresh user data to show updated schedule immediately
+      await refreshUserData();
 
       setSaveSuccess(true);
       setTimeout(() => setSaveSuccess(false), 3000);

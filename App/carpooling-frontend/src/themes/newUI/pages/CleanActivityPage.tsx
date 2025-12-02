@@ -24,6 +24,201 @@ interface Ride {
   passengers?: { uid: string; name: string }[];
 }
 
+// RideCard component extracted outside to prevent unnecessary re-renders
+const RideCard: React.FC<{
+  ride: Ride;
+  isCompleted?: boolean;
+  userData: any;
+  isDark: boolean;
+  navigate: any;
+  ratingRide: string | null;
+  setRatingRide: (id: string | null) => void;
+  rating: number;
+  setRating: (rating: number) => void;
+  review: string;
+  setReview: (review: string) => void;
+  handleSubmitRating: (rideId: string) => void;
+  handleCancelBooking: (rideId: string) => void;
+  onManageRide?: (ride: Ride) => void;
+}> = ({
+  ride,
+  isCompleted,
+  userData,
+  isDark,
+  navigate,
+  ratingRide,
+  setRatingRide,
+  rating,
+  setRating,
+  review,
+  setReview,
+  handleSubmitRating,
+  handleCancelBooking,
+  onManageRide,
+}) => (
+  <CleanCard padding="lg">
+    <div className="flex items-center justify-between mb-4">
+      <h3
+        onClick={() => navigate(`/user-stats/${ride.driverID}`)}
+        className={`text-xl font-bold hover:text-teal-600 cursor-pointer transition ${
+          isDark ? 'text-gray-100' : 'text-gray-900'
+        }`}
+      >
+        {ride.driverName}
+      </h3>
+      <span
+        className={`px-3 py-1 rounded-full text-sm font-semibold ${
+          isCompleted
+            ? 'bg-green-100 text-green-700'
+            : 'bg-teal-100 text-teal-700'
+        }`}
+      >
+        {isCompleted ? 'Completed' : 'Active'}
+      </span>
+    </div>
+
+    <div className="space-y-3 mb-4">
+      <div className="flex items-start gap-2">
+        <MapPin className="w-5 h-5 text-teal-500 flex-shrink-0 mt-0.5" />
+        <div>
+          <p className={`text-sm ${isDark ? 'text-gray-400' : 'text-gray-600'}`}>Route</p>
+          <p className={isDark ? 'text-gray-100' : 'text-gray-900'}>
+            {ride.pickup} → {ride.destination}
+          </p>
+        </div>
+      </div>
+
+      <div className={`flex items-center gap-4 ${isDark ? 'text-gray-400' : 'text-gray-600'}`}>
+        <div className="flex items-center gap-2">
+          <Calendar className="w-4 h-4" />
+          <span className="text-sm">{ride.date}</span>
+        </div>
+        <div className="flex items-center gap-2">
+          <Clock className="w-4 h-4" />
+          <span className="text-sm">{ride.time}</span>
+        </div>
+      </div>
+
+      <div className={isDark ? 'text-gray-400' : 'text-gray-600'}>
+        <span className={`text-2xl font-bold ${isDark ? 'text-gray-100' : 'text-gray-900'}`}>{ride.cost} BHD</span> per seat
+      </div>
+    </div>
+
+    <div className="flex gap-2">
+      {!isCompleted && (
+        <CleanButton
+          onClick={() => navigate(`/chat/${ride.id}`)}
+          variant="secondary"
+          className="flex-1 flex items-center justify-center gap-2"
+        >
+          <MessageSquare className="w-5 h-5" />
+          Chat
+        </CleanButton>
+      )}
+
+      {!isCompleted && userData?.role === 'driver' && onManageRide && (
+        <CleanButton
+          onClick={() => onManageRide(ride)}
+          className="flex-1 flex items-center justify-center gap-2 bg-gradient-to-r from-purple-500 to-pink-500 hover:from-purple-600 hover:to-pink-600"
+        >
+          <Edit className="w-5 h-5" />
+          Manage
+        </CleanButton>
+      )}
+
+      {!isCompleted && userData?.role === 'rider' && (
+        <CleanButton
+          onClick={() => handleCancelBooking(ride.id)}
+          className="flex-1 flex items-center justify-center gap-2 bg-gradient-to-r from-red-500 to-rose-500 hover:from-red-600 hover:to-rose-600"
+        >
+          <XCircle className="w-5 h-5" />
+          Cancel Booking
+        </CleanButton>
+      )}
+
+      {isCompleted && userData?.role === 'rider' && ratingRide !== ride.id && (
+        <CleanButton
+          onClick={() => setRatingRide(ride.id)}
+          className="flex-1 flex items-center justify-center gap-2 bg-gradient-to-r from-yellow-500 to-orange-500 hover:from-yellow-600 hover:to-orange-600"
+        >
+          <Star className="w-5 h-5" />
+          Rate Ride
+        </CleanButton>
+      )}
+    </div>
+
+    {ratingRide === ride.id && (
+      <motion.div
+        className={`mt-4 p-4 rounded-lg ${
+          isDark ? 'bg-gray-800 border border-gray-700' : 'bg-gray-50 border border-gray-200'
+        }`}
+        initial={{ opacity: 0, height: 0 }}
+        animate={{ opacity: 1, height: 'auto' }}
+      >
+        <div className="mb-3">
+          <label className={`block mb-2 text-sm ${isDark ? 'text-gray-300' : 'text-gray-700'}`}>Rating</label>
+          <div className="flex gap-2">
+            {[1, 2, 3, 4, 5].map((star) => (
+              <button
+                key={star}
+                type="button"
+                onClick={() => setRating(star)}
+                className="focus:outline-none"
+              >
+                <Star
+                  className={`w-8 h-8 ${
+                    star <= rating
+                      ? 'text-yellow-400 fill-yellow-400'
+                      : isDark ? 'text-gray-600' : 'text-gray-300'
+                  }`}
+                />
+              </button>
+            ))}
+          </div>
+        </div>
+
+        <div className="mb-3">
+          <label className={`block mb-2 text-sm ${isDark ? 'text-gray-300' : 'text-gray-700'}`}>Review (Optional)</label>
+          <textarea
+            value={review}
+            onChange={(e) => setReview(e.target.value)}
+            className={`w-full px-4 py-2 rounded-lg focus:outline-none focus:border-teal-500 resize-none ${
+              isDark
+                ? 'bg-gray-700 border border-gray-600 text-gray-100 placeholder-gray-500'
+                : 'bg-white border border-gray-200 text-gray-900 placeholder-gray-400'
+            }`}
+            rows={3}
+            placeholder="Share your experience..."
+          />
+        </div>
+
+        <div className="flex gap-2">
+          <CleanButton
+            onClick={() => handleSubmitRating(ride.id)}
+            className="flex-1"
+          >
+            Submit
+          </CleanButton>
+          <button
+            onClick={() => {
+              setRatingRide(null);
+              setRating(5);
+              setReview('');
+            }}
+            className={`px-4 py-2 rounded-lg transition ${
+              isDark
+                ? 'bg-gray-700 border border-gray-600 hover:bg-gray-600'
+                : 'bg-white border border-gray-200 hover:bg-gray-50'
+            }`}
+          >
+            Cancel
+          </button>
+        </div>
+      </motion.div>
+    )}
+  </CleanCard>
+);
+
 export const CleanActivityPage: React.FC = () => {
   const { userData } = useAuth();
   const { isDark } = useUITheme();
@@ -51,9 +246,18 @@ export const CleanActivityPage: React.FC = () => {
     const checkPendingRatings = async () => {
       if (!userData || completedRides.length === 0 || userData.role !== 'rider') return;
 
+      // Get skipped ratings from localStorage
+      const skippedRatingsKey = `skippedRatings_${userData.uid}`;
+      const skippedRatings = JSON.parse(localStorage.getItem(skippedRatingsKey) || '[]');
+
       const unratedRides = [];
 
       for (const ride of completedRides) {
+        // Skip if user has already skipped this ride
+        if (skippedRatings.includes(ride.id)) {
+          continue;
+        }
+
         const ratingsRef = collection(db, 'ratings');
         const ratingQuery = query(
           ratingsRef,
@@ -408,175 +612,6 @@ export const CleanActivityPage: React.FC = () => {
     }
   };
 
-  const RideCard: React.FC<{ ride: Ride; isCompleted?: boolean }> = ({ ride, isCompleted }) => (
-    <CleanCard padding="lg">
-      <div className="flex items-center justify-between mb-4">
-        <h3
-          onClick={() => navigate(`/user-stats/${ride.driverID}`)}
-          className={`text-xl font-bold hover:text-teal-600 cursor-pointer transition ${
-            isDark ? 'text-gray-100' : 'text-gray-900'
-          }`}
-        >
-          {ride.driverName}
-        </h3>
-        <span
-          className={`px-3 py-1 rounded-full text-sm font-semibold ${
-            isCompleted
-              ? 'bg-green-100 text-green-700'
-              : 'bg-teal-100 text-teal-700'
-          }`}
-        >
-          {isCompleted ? 'Completed' : 'Active'}
-        </span>
-      </div>
-
-      <div className="space-y-3 mb-4">
-        <div className="flex items-start gap-2">
-          <MapPin className="w-5 h-5 text-teal-500 flex-shrink-0 mt-0.5" />
-          <div>
-            <p className={`text-sm ${isDark ? 'text-gray-400' : 'text-gray-600'}`}>Route</p>
-            <p className={isDark ? 'text-gray-100' : 'text-gray-900'}>
-              {ride.pickup} → {ride.destination}
-            </p>
-          </div>
-        </div>
-
-        <div className={`flex items-center gap-4 ${isDark ? 'text-gray-400' : 'text-gray-600'}`}>
-          <div className="flex items-center gap-2">
-            <Calendar className="w-4 h-4" />
-            <span className="text-sm">{ride.date}</span>
-          </div>
-          <div className="flex items-center gap-2">
-            <Clock className="w-4 h-4" />
-            <span className="text-sm">{ride.time}</span>
-          </div>
-        </div>
-
-        <div className={isDark ? 'text-gray-400' : 'text-gray-600'}>
-          <span className={`text-2xl font-bold ${isDark ? 'text-gray-100' : 'text-gray-900'}`}>{ride.cost} BHD</span> per seat
-        </div>
-      </div>
-
-      <div className="flex gap-2">
-        {!isCompleted && (
-          <CleanButton
-            onClick={() => navigate(`/chat/${ride.id}`)}
-            variant="secondary"
-            className="flex-1 flex items-center justify-center gap-2"
-          >
-            <MessageSquare className="w-5 h-5" />
-            Chat
-          </CleanButton>
-        )}
-
-        {!isCompleted && userData?.role === 'driver' && (
-          <CleanButton
-            onClick={() => {
-              setSelectedRide(ride);
-              setEditCost(ride.cost.toString());
-              setEditTime(ride.time);
-              setShowManageModal(true);
-            }}
-            className="flex-1 flex items-center justify-center gap-2 bg-gradient-to-r from-purple-500 to-pink-500 hover:from-purple-600 hover:to-pink-600"
-          >
-            <Edit className="w-5 h-5" />
-            Manage
-          </CleanButton>
-        )}
-
-        {!isCompleted && userData?.role === 'rider' && (
-          <CleanButton
-            onClick={() => handleCancelBooking(ride.id)}
-            className="flex-1 flex items-center justify-center gap-2 bg-gradient-to-r from-red-500 to-rose-500 hover:from-red-600 hover:to-rose-600"
-          >
-            <XCircle className="w-5 h-5" />
-            Cancel Booking
-          </CleanButton>
-        )}
-
-        {isCompleted && userData?.role === 'rider' && ratingRide !== ride.id && (
-          <CleanButton
-            onClick={() => setRatingRide(ride.id)}
-            className="flex-1 flex items-center justify-center gap-2 bg-gradient-to-r from-yellow-500 to-orange-500 hover:from-yellow-600 hover:to-orange-600"
-          >
-            <Star className="w-5 h-5" />
-            Rate Ride
-          </CleanButton>
-        )}
-      </div>
-
-      {ratingRide === ride.id && (
-        <motion.div
-          className={`mt-4 p-4 rounded-lg ${
-            isDark ? 'bg-gray-800 border border-gray-700' : 'bg-gray-50 border border-gray-200'
-          }`}
-          initial={{ opacity: 0, height: 0 }}
-          animate={{ opacity: 1, height: 'auto' }}
-        >
-          <div className="mb-3">
-            <label className={`block mb-2 text-sm ${isDark ? 'text-gray-300' : 'text-gray-700'}`}>Rating</label>
-            <div className="flex gap-2">
-              {[1, 2, 3, 4, 5].map((star) => (
-                <button
-                  key={star}
-                  type="button"
-                  onClick={() => setRating(star)}
-                  className="focus:outline-none"
-                >
-                  <Star
-                    className={`w-8 h-8 ${
-                      star <= rating
-                        ? 'text-yellow-400 fill-yellow-400'
-                        : isDark ? 'text-gray-600' : 'text-gray-300'
-                    }`}
-                  />
-                </button>
-              ))}
-            </div>
-          </div>
-
-          <div className="mb-3">
-            <label className={`block mb-2 text-sm ${isDark ? 'text-gray-300' : 'text-gray-700'}`}>Review (Optional)</label>
-            <textarea
-              value={review}
-              onChange={(e) => setReview(e.target.value)}
-              className={`w-full px-4 py-2 rounded-lg focus:outline-none focus:border-teal-500 resize-none ${
-                isDark
-                  ? 'bg-gray-700 border border-gray-600 text-gray-100 placeholder-gray-500'
-                  : 'bg-white border border-gray-200 text-gray-900 placeholder-gray-400'
-              }`}
-              rows={3}
-              placeholder="Share your experience..."
-            />
-          </div>
-
-          <div className="flex gap-2">
-            <CleanButton
-              onClick={() => handleSubmitRating(ride.id)}
-              className="flex-1"
-            >
-              Submit
-            </CleanButton>
-            <button
-              onClick={() => {
-                setRatingRide(null);
-                setRating(5);
-                setReview('');
-              }}
-              className={`px-4 py-2 rounded-lg transition ${
-                isDark
-                  ? 'bg-gray-700 border border-gray-600 hover:bg-gray-600'
-                  : 'bg-white border border-gray-200 hover:bg-gray-50'
-              }`}
-            >
-              Cancel
-            </button>
-          </div>
-        </motion.div>
-      )}
-    </CleanCard>
-  );
-
   return (
     <div className={`min-h-screen py-12 px-4 ${isDark ? 'bg-gray-900' : 'bg-gray-50'}`}>
       <div className="max-w-6xl mx-auto">
@@ -605,7 +640,27 @@ export const CleanActivityPage: React.FC = () => {
               ) : (
                 <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
                   {activeRides.map((ride) => (
-                    <RideCard key={ride.id} ride={ride} />
+                    <RideCard
+                      key={ride.id}
+                      ride={ride}
+                      userData={userData}
+                      isDark={isDark}
+                      navigate={navigate}
+                      ratingRide={ratingRide}
+                      setRatingRide={setRatingRide}
+                      rating={rating}
+                      setRating={setRating}
+                      review={review}
+                      setReview={setReview}
+                      handleSubmitRating={handleSubmitRating}
+                      handleCancelBooking={handleCancelBooking}
+                      onManageRide={(ride) => {
+                        setSelectedRide(ride);
+                        setEditCost(ride.cost.toString());
+                        setEditTime(ride.time);
+                        setShowManageModal(true);
+                      }}
+                    />
                   ))}
                 </div>
               )}
@@ -620,7 +675,22 @@ export const CleanActivityPage: React.FC = () => {
               ) : (
                 <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
                   {completedRides.map((ride) => (
-                    <RideCard key={ride.id} ride={ride} isCompleted />
+                    <RideCard
+                      key={ride.id}
+                      ride={ride}
+                      isCompleted
+                      userData={userData}
+                      isDark={isDark}
+                      navigate={navigate}
+                      ratingRide={ratingRide}
+                      setRatingRide={setRatingRide}
+                      rating={rating}
+                      setRating={setRating}
+                      review={review}
+                      setReview={setReview}
+                      handleSubmitRating={handleSubmitRating}
+                      handleCancelBooking={handleCancelBooking}
+                    />
                   ))}
                 </div>
               )}
@@ -911,6 +981,15 @@ export const CleanActivityPage: React.FC = () => {
                 </CleanButton>
                 <button
                   onClick={() => {
+                    // Save skipped ride to localStorage
+                    if (pendingRatingRide && userData) {
+                      const skippedRatingsKey = `skippedRatings_${userData.uid}`;
+                      const skippedRatings = JSON.parse(localStorage.getItem(skippedRatingsKey) || '[]');
+                      if (!skippedRatings.includes(pendingRatingRide.id)) {
+                        skippedRatings.push(pendingRatingRide.id);
+                        localStorage.setItem(skippedRatingsKey, JSON.stringify(skippedRatings));
+                      }
+                    }
                     setShowRatingPrompt(false);
                     setPendingRatingRide(null);
                     setRating(5);

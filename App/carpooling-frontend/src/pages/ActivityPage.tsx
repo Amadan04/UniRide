@@ -22,6 +22,202 @@ interface Ride {
   passengers?: { uid: string; name: string }[];
 }
 
+// RideCard component extracted outside to prevent unnecessary re-renders
+const RideCard: React.FC<{
+  ride: Ride;
+  isCompleted?: boolean;
+  userData: any;
+  navigate: any;
+  ratingRide: string | null;
+  setRatingRide: (id: string | null) => void;
+  rating: number;
+  setRating: (rating: number) => void;
+  review: string;
+  setReview: (review: string) => void;
+  handleSubmitRating: (rideId: string) => void;
+  handleCancelBooking: (rideId: string) => void;
+  onManageRide?: (ride: Ride) => void;
+}> = ({
+  ride,
+  isCompleted,
+  userData,
+  navigate,
+  ratingRide,
+  setRatingRide,
+  rating,
+  setRating,
+  review,
+  setReview,
+  handleSubmitRating,
+  handleCancelBooking,
+  onManageRide,
+}) => (
+  <motion.div
+    className="backdrop-blur-xl bg-white/10 border border-cyan-400/30 rounded-2xl p-6"
+    initial={{ opacity: 0, y: 20 }}
+    animate={{ opacity: 1, y: 0 }}
+  >
+    <div className="flex items-center justify-between mb-4">
+      <h3
+        onClick={() => navigate(`/user-stats/${ride.driverID}`)}
+        className="text-xl font-bold text-white hover:text-cyan-400 cursor-pointer transition"
+      >
+        {ride.driverName}
+      </h3>
+      <span
+        className={`px-3 py-1 rounded-full text-sm font-semibold ${
+          isCompleted
+            ? 'bg-green-500/20 text-green-400'
+            : 'bg-cyan-500/20 text-cyan-400'
+        }`}
+      >
+        {isCompleted ? 'Completed' : 'Active'}
+      </span>
+    </div>
+
+    <div className="space-y-3 mb-4">
+      <div className="flex items-start gap-2">
+        <MapPin className="w-5 h-5 text-cyan-400 flex-shrink-0 mt-0.5" />
+        <div>
+          <p className="text-sm text-cyan-300/70">Route</p>
+          <p className="text-white">
+            {ride.pickup} → {ride.destination}
+          </p>
+        </div>
+      </div>
+
+      <div className="flex items-center gap-4 text-cyan-300">
+        <div className="flex items-center gap-2">
+          <Calendar className="w-4 h-4" />
+          <span className="text-sm">{ride.date}</span>
+        </div>
+        <div className="flex items-center gap-2">
+          <Clock className="w-4 h-4" />
+          <span className="text-sm">{ride.time}</span>
+        </div>
+      </div>
+
+      <div className="text-cyan-300">
+        <span className="text-2xl font-bold text-white">{ride.cost} BHD</span> per seat
+      </div>
+    </div>
+
+    <div className="flex gap-2">
+      {!isCompleted && (
+        <motion.button
+          onClick={() => navigate(`/chat/${ride.id}`)}
+          className="flex-1 flex items-center justify-center gap-2 py-3 bg-gradient-to-r from-cyan-500 to-blue-500 text-white font-semibold rounded-lg"
+          whileHover={{ scale: 1.02 }}
+          whileTap={{ scale: 0.98 }}
+        >
+          <MessageSquare className="w-5 h-5" />
+          Chat
+        </motion.button>
+      )}
+
+      {!isCompleted && userData?.role === 'driver' && onManageRide && (
+        <motion.button
+          onClick={() => onManageRide(ride)}
+          className="flex-1 flex items-center justify-center gap-2 py-3 bg-gradient-to-r from-purple-500 to-pink-500 text-white font-semibold rounded-lg"
+          whileHover={{ scale: 1.02 }}
+          whileTap={{ scale: 0.98 }}
+        >
+          <Edit className="w-5 h-5" />
+          Manage
+        </motion.button>
+      )}
+
+      {!isCompleted && userData?.role === 'rider' && (
+        <motion.button
+          onClick={() => handleCancelBooking(ride.id)}
+          className="flex-1 flex items-center justify-center gap-2 py-3 bg-gradient-to-r from-red-500 to-rose-500 text-white font-semibold rounded-lg"
+          whileHover={{ scale: 1.02 }}
+          whileTap={{ scale: 0.98 }}
+        >
+          <XCircle className="w-5 h-5" />
+          Cancel Booking
+        </motion.button>
+      )}
+
+      {isCompleted && userData?.role === 'rider' && ratingRide !== ride.id && (
+        <motion.button
+          onClick={() => setRatingRide(ride.id)}
+          className="flex-1 flex items-center justify-center gap-2 py-3 bg-gradient-to-r from-yellow-500 to-orange-500 text-white font-semibold rounded-lg"
+          whileHover={{ scale: 1.02 }}
+          whileTap={{ scale: 0.98 }}
+        >
+          <Star className="w-5 h-5" />
+          Rate Ride
+        </motion.button>
+      )}
+    </div>
+
+    {ratingRide === ride.id && (
+      <motion.div
+        className="mt-4 p-4 bg-white/5 border border-cyan-400/30 rounded-lg"
+        initial={{ opacity: 0, height: 0 }}
+        animate={{ opacity: 1, height: 'auto' }}
+      >
+        <div className="mb-3">
+          <label className="block text-cyan-300 mb-2 text-sm">Rating</label>
+          <div className="flex gap-2">
+            {[1, 2, 3, 4, 5].map((star) => (
+              <button
+                key={star}
+                type="button"
+                onClick={() => setRating(star)}
+                className="focus:outline-none"
+              >
+                <Star
+                  className={`w-8 h-8 ${
+                    star <= rating
+                      ? 'text-yellow-400 fill-yellow-400'
+                      : 'text-gray-400'
+                  }`}
+                />
+              </button>
+            ))}
+          </div>
+        </div>
+
+        <div className="mb-3">
+          <label className="block text-cyan-300 mb-2 text-sm">Review (Optional)</label>
+          <textarea
+            value={review}
+            onChange={(e) => setReview(e.target.value)}
+            className="w-full px-4 py-2 bg-white/5 border border-cyan-400/30 rounded-lg text-white placeholder-cyan-300/50 focus:outline-none focus:border-cyan-400 resize-none"
+            rows={3}
+            placeholder="Share your experience..."
+          />
+        </div>
+
+        <div className="flex gap-2">
+          <motion.button
+            onClick={() => handleSubmitRating(ride.id)}
+            className="flex-1 py-2 bg-gradient-to-r from-cyan-500 to-blue-500 text-white font-semibold rounded-lg"
+            whileHover={{ scale: 1.02 }}
+            whileTap={{ scale: 0.98 }}
+          >
+            Submit
+          </motion.button>
+          <motion.button
+            onClick={() => {
+              setRatingRide(null);
+              setRating(5);
+              setReview('');
+            }}
+            className="px-4 py-2 bg-white/5 border border-cyan-400/30 text-cyan-400 rounded-lg"
+            whileHover={{ scale: 1.02 }}
+            whileTap={{ scale: 0.98 }}
+          >
+            Cancel
+          </motion.button>
+        </div>
+      </motion.div>
+    )}
+  </motion.div>
+);
+
 export const ActivityPage: React.FC = () => {
   const { userData } = useAuth();
   const navigate = useNavigate();
@@ -52,10 +248,19 @@ export const ActivityPage: React.FC = () => {
       // Only show rating prompt for riders (passengers), not drivers
       if (!userData || completedRides.length === 0 || userData.role !== 'rider') return;
 
-      // Find rides that haven't been rated yet
+      // Get skipped ratings from localStorage
+      const skippedRatingsKey = `skippedRatings_${userData.uid}`;
+      const skippedRatings = JSON.parse(localStorage.getItem(skippedRatingsKey) || '[]');
+
+      // Find rides that haven't been rated yet and haven't been skipped
       const unratedRides = [];
 
       for (const ride of completedRides) {
+        // Skip if user has already skipped this ride
+        if (skippedRatings.includes(ride.id)) {
+          continue;
+        }
+
         // Check if user has already rated this ride
         const ratingsRef = collection(db, 'ratings');
         const ratingQuery = query(
@@ -434,177 +639,6 @@ export const ActivityPage: React.FC = () => {
     }
   };
 
-  const RideCard: React.FC<{ ride: Ride; isCompleted?: boolean }> = ({ ride, isCompleted }) => (
-    <motion.div
-      className="backdrop-blur-xl bg-white/10 border border-cyan-400/30 rounded-2xl p-6"
-      initial={{ opacity: 0, y: 20 }}
-      animate={{ opacity: 1, y: 0 }}
-    >
-      <div className="flex items-center justify-between mb-4">
-        <h3
-          onClick={() => navigate(`/user-stats/${ride.driverID}`)}
-          className="text-xl font-bold text-white hover:text-cyan-400 cursor-pointer transition"
-        >
-          {ride.driverName}
-        </h3>
-        <span
-          className={`px-3 py-1 rounded-full text-sm font-semibold ${
-            isCompleted
-              ? 'bg-green-500/20 text-green-400'
-              : 'bg-cyan-500/20 text-cyan-400'
-          }`}
-        >
-          {isCompleted ? 'Completed' : 'Active'}
-        </span>
-      </div>
-
-      <div className="space-y-3 mb-4">
-        <div className="flex items-start gap-2">
-          <MapPin className="w-5 h-5 text-cyan-400 flex-shrink-0 mt-0.5" />
-          <div>
-            <p className="text-sm text-cyan-300/70">Route</p>
-            <p className="text-white">
-              {ride.pickup} → {ride.destination}
-            </p>
-          </div>
-        </div>
-
-        <div className="flex items-center gap-4 text-cyan-300">
-          <div className="flex items-center gap-2">
-            <Calendar className="w-4 h-4" />
-            <span className="text-sm">{ride.date}</span>
-          </div>
-          <div className="flex items-center gap-2">
-            <Clock className="w-4 h-4" />
-            <span className="text-sm">{ride.time}</span>
-          </div>
-        </div>
-
-        <div className="text-cyan-300">
-          <span className="text-2xl font-bold text-white">{ride.cost} BHD</span> per seat
-        </div>
-      </div>
-
-      <div className="flex gap-2">
-        {!isCompleted && (
-          <motion.button
-            onClick={() => navigate(`/chat/${ride.id}`)}
-            className="flex-1 flex items-center justify-center gap-2 py-3 bg-gradient-to-r from-cyan-500 to-blue-500 text-white font-semibold rounded-lg"
-            whileHover={{ scale: 1.02 }}
-            whileTap={{ scale: 0.98 }}
-          >
-            <MessageSquare className="w-5 h-5" />
-            Chat
-          </motion.button>
-        )}
-
-        {!isCompleted && userData?.role === 'driver' && (
-          <motion.button
-            onClick={() => {
-              setSelectedRide(ride);
-              setEditCost(ride.cost.toString());
-              setEditTime(ride.time);
-              setShowManageModal(true);
-            }}
-            className="flex-1 flex items-center justify-center gap-2 py-3 bg-gradient-to-r from-purple-500 to-pink-500 text-white font-semibold rounded-lg"
-            whileHover={{ scale: 1.02 }}
-            whileTap={{ scale: 0.98 }}
-          >
-            <Edit className="w-5 h-5" />
-            Manage
-          </motion.button>
-        )}
-
-        {!isCompleted && userData?.role === 'rider' && (
-          <motion.button
-            onClick={() => handleCancelBooking(ride.id)}
-            className="flex-1 flex items-center justify-center gap-2 py-3 bg-gradient-to-r from-red-500 to-rose-500 text-white font-semibold rounded-lg"
-            whileHover={{ scale: 1.02 }}
-            whileTap={{ scale: 0.98 }}
-          >
-            <XCircle className="w-5 h-5" />
-            Cancel Booking
-          </motion.button>
-        )}
-
-        {isCompleted && userData?.role === 'rider' && ratingRide !== ride.id && (
-          <motion.button
-            onClick={() => setRatingRide(ride.id)}
-            className="flex-1 flex items-center justify-center gap-2 py-3 bg-gradient-to-r from-yellow-500 to-orange-500 text-white font-semibold rounded-lg"
-            whileHover={{ scale: 1.02 }}
-            whileTap={{ scale: 0.98 }}
-          >
-            <Star className="w-5 h-5" />
-            Rate Ride
-          </motion.button>
-        )}
-      </div>
-
-      {ratingRide === ride.id && (
-        <motion.div
-          className="mt-4 p-4 bg-white/5 border border-cyan-400/30 rounded-lg"
-          initial={{ opacity: 0, height: 0 }}
-          animate={{ opacity: 1, height: 'auto' }}
-        >
-          <div className="mb-3">
-            <label className="block text-cyan-300 mb-2 text-sm">Rating</label>
-            <div className="flex gap-2">
-              {[1, 2, 3, 4, 5].map((star) => (
-                <button
-                  key={star}
-                  type="button"
-                  onClick={() => setRating(star)}
-                  className="focus:outline-none"
-                >
-                  <Star
-                    className={`w-8 h-8 ${
-                      star <= rating
-                        ? 'text-yellow-400 fill-yellow-400'
-                        : 'text-gray-400'
-                    }`}
-                  />
-                </button>
-              ))}
-            </div>
-          </div>
-
-          <div className="mb-3">
-            <label className="block text-cyan-300 mb-2 text-sm">Review (Optional)</label>
-            <textarea
-              value={review}
-              onChange={(e) => setReview(e.target.value)}
-              className="w-full px-4 py-2 bg-white/5 border border-cyan-400/30 rounded-lg text-white placeholder-cyan-300/50 focus:outline-none focus:border-cyan-400 resize-none"
-              rows={3}
-              placeholder="Share your experience..."
-            />
-          </div>
-
-          <div className="flex gap-2">
-            <motion.button
-              onClick={() => handleSubmitRating(ride.id)}
-              className="flex-1 py-2 bg-gradient-to-r from-cyan-500 to-blue-500 text-white font-semibold rounded-lg"
-              whileHover={{ scale: 1.02 }}
-              whileTap={{ scale: 0.98 }}
-            >
-              Submit
-            </motion.button>
-            <motion.button
-              onClick={() => {
-                setRatingRide(null);
-                setRating(5);
-                setReview('');
-              }}
-              className="px-4 py-2 bg-white/5 border border-cyan-400/30 text-cyan-400 rounded-lg"
-              whileHover={{ scale: 1.02 }}
-              whileTap={{ scale: 0.98 }}
-            >
-              Cancel
-            </motion.button>
-          </div>
-        </motion.div>
-      )}
-    </motion.div>
-  );
 
   return (
     <motion.div
@@ -645,7 +679,26 @@ export const ActivityPage: React.FC = () => {
                   animate="animate"
                 >
                   {activeRides.map((ride) => (
-                    <RideCard key={ride.id} ride={ride} />
+                    <RideCard
+                      key={ride.id}
+                      ride={ride}
+                      userData={userData}
+                      navigate={navigate}
+                      ratingRide={ratingRide}
+                      setRatingRide={setRatingRide}
+                      rating={rating}
+                      setRating={setRating}
+                      review={review}
+                      setReview={setReview}
+                      handleSubmitRating={handleSubmitRating}
+                      handleCancelBooking={handleCancelBooking}
+                      onManageRide={(ride) => {
+                        setSelectedRide(ride);
+                        setEditCost(ride.cost.toString());
+                        setEditTime(ride.time);
+                        setShowManageModal(true);
+                      }}
+                    />
                   ))}
                 </motion.div>
               )}
@@ -668,7 +721,21 @@ export const ActivityPage: React.FC = () => {
                   animate="animate"
                 >
                   {completedRides.map((ride) => (
-                    <RideCard key={ride.id} ride={ride} isCompleted />
+                    <RideCard
+                      key={ride.id}
+                      ride={ride}
+                      isCompleted
+                      userData={userData}
+                      navigate={navigate}
+                      ratingRide={ratingRide}
+                      setRatingRide={setRatingRide}
+                      rating={rating}
+                      setRating={setRating}
+                      review={review}
+                      setReview={setReview}
+                      handleSubmitRating={handleSubmitRating}
+                      handleCancelBooking={handleCancelBooking}
+                    />
                   ))}
                 </motion.div>
               )}
@@ -939,6 +1006,15 @@ export const ActivityPage: React.FC = () => {
                 </motion.button>
                 <motion.button
                   onClick={() => {
+                    // Save skipped ride to localStorage
+                    if (pendingRatingRide && userData) {
+                      const skippedRatingsKey = `skippedRatings_${userData.uid}`;
+                      const skippedRatings = JSON.parse(localStorage.getItem(skippedRatingsKey) || '[]');
+                      if (!skippedRatings.includes(pendingRatingRide.id)) {
+                        skippedRatings.push(pendingRatingRide.id);
+                        localStorage.setItem(skippedRatingsKey, JSON.stringify(skippedRatings));
+                      }
+                    }
                     setShowRatingPrompt(false);
                     setPendingRatingRide(null);
                     setRating(5);
