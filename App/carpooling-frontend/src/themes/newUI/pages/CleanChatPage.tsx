@@ -35,7 +35,7 @@ export const CleanChatPage: React.FC = () => {
   const { userData } = useAuth();
   const { isDark } = useUITheme();
   const navigate = useNavigate();
-  const { toast } = useToast();
+  const toast = useToast();
 
   const [messages, setMessages] = useState<Message[]>([]);
   const [newMessage, setNewMessage] = useState('');

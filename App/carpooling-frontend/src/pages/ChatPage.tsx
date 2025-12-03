@@ -34,7 +34,7 @@ export const ChatPage: React.FC = () => {
   const { rideID } = useParams<{ rideID: string }>();
   const { userData } = useAuth();
   const navigate = useNavigate();
-  const { toast } = useToast();
+  const toast = useToast();
 
   const [messages, setMessages] = useState<Message[]>([]);
   const [newMessage, setNewMessage] = useState('');
