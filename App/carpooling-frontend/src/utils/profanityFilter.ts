@@ -1,5 +1,3 @@
-import Filter from 'bad-words';
-
 /**
  * Smart Profanity Filter for UniRide
  *
@@ -10,30 +8,19 @@ import Filter from 'bad-words';
  */
 
 class SmartProfanityFilter {
-  private filter: Filter;
-
-  // Words that are commonly used in normal context and should NEVER be blocked
-  private readonly allowedWords = [
-    'bad', 'terrible', 'horrible', 'awful', 'poor',
-    'damn', 'dammit', 'hell', 'crap', 'sucks',
-    'stupid', 'dumb', 'idiot', 'jerk', 'butt',
-    'pissed', 'piss', 'ass', 'arse', 'dick',
-    'bloody', 'bugger', 'bollocks'
-  ];
-
   // Severe words that should ALWAYS be blocked (hate speech, explicit content, harassment)
   private readonly severeWords = [
     // Explicit sexual content
-    'fuck', 'fucking', 'fucked', 'fucker', 'motherfucker',
-    'shit', 'bitch', 'bastard', 'whore', 'slut',
-    'cock', 'pussy', 'cunt', 'twat',
+    'fuck', 'fucking', 'fucked', 'fucker', 'motherfucker', 'fck', 'fuk',
+    'shit', 'shitting', 'shitted', 'bitch', 'bitches', 'bastard', 'whore', 'slut',
+    'cock', 'pussy', 'cunt', 'twat', 'dick', 'penis', 'vagina',
 
-    // Racial slurs and hate speech (partial list - bad-words has comprehensive list)
+    // Racial slurs and hate speech
     'nigger', 'nigga', 'chink', 'spic', 'kike',
-    'fag', 'faggot', 'dyke', 'retard',
+    'fag', 'faggot', 'dyke', 'tranny', 'retard',
 
     // Harassment and threats
-    'kill yourself', 'kys', 'die', 'suicide'
+    'kill yourself', 'kys', 'die', 'suicide', 'kill urself'
   ];
 
   // Phrases that indicate acceptable context (prevents false positives)
@@ -45,19 +32,13 @@ class SmartProfanityFilter {
   ];
 
   constructor() {
-    this.filter = new Filter();
-
-    // Remove all default words from the filter
-    this.filter.removeWords(...this.filter.list);
-
-    // Add only severe words to the filter
-    this.filter.addWords(...this.severeWords);
+    // No external library needed - we handle everything ourselves
   }
 
   /**
    * Check if text contains severe profanity
    * @param text - Text to check
-   * @returns Object with isProfane flag and filtered text
+   * @returns Object with isProfane flag and message
    */
   checkProfanity(text: string): { isProfane: boolean; message: string } {
     if (!text || text.trim().length === 0) {
@@ -78,7 +59,7 @@ class SmartProfanityFilter {
     }
 
     // Check for severe profanity
-    const hasSevereProfanity = this.filter.isProfane(text);
+    const hasSevereProfanity = this.containsSevereProfanity(lowerText);
 
     if (hasSevereProfanity) {
       return {
@@ -98,22 +79,16 @@ class SmartProfanityFilter {
 
     // Check if any severe word appears as a standalone word
     for (const word of this.severeWords) {
+      // Escape special regex characters in the word
+      const escapedWord = word.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
       // Use word boundaries to match whole words only
-      const regex = new RegExp(`\\b${word}\\b`, 'i');
+      const regex = new RegExp(`\\b${escapedWord}\\b`, 'i');
       if (regex.test(lowerText)) {
         return true;
       }
     }
 
     return false;
-  }
-
-  /**
-   * Get a cleaned version of the text (for logging/debugging)
-   * Note: We don't auto-censor - we block the message entirely if profane
-   */
-  clean(text: string): string {
-    return this.filter.clean(text);
   }
 }
 
