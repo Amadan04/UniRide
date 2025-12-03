@@ -15,7 +15,9 @@
 ### 🔐 **Authentication & Safety**
 - University email verification
 - Role-based access (Driver/Rider)
+- **Dynamic role switching** - Switch between driver and rider modes
 - User ratings and reviews system
+- **Smart profanity filter** - Context-aware content moderation
 - Gender-based ride filtering
 - Verified driver profiles
 
@@ -33,9 +35,11 @@
 
 ### 💬 **Real-time Features**
 - In-app chat with typing indicators
+- **Profanity-filtered messaging** - Keeps conversations respectful
 - Live GPS tracking during rides
 - Interactive maps
 - System notifications
+- Real-time ride status updates
 
 ### 🤖 **AI Assistant**
 - GPT-4 powered chatbot
@@ -55,10 +59,11 @@
 - Environmental impact tracking
 
 ### 🎨 **Theme Customization**
-- Dual theme system (Neon/Clean)
-- Light/Dark mode support
+- **Dual theme system** - Neon (vibrant gradients) & Clean (minimalist)
+- Light/Dark mode support for both themes
 - Cross-device preference sync
 - Persistent theme settings via Firebase
+- Theme-aware components across all pages
 
 ---
 
@@ -149,10 +154,25 @@ SWEN360/
 
 ## 🎯 Key Features Details
 
+### Role Switching
+Users can dynamically switch between driver and rider roles from their profile page:
+- Validates no active rides before switching
+- Updates role in real-time
+- Redirects to home with new role-based UI
+- Available in both Neon and Clean themes
+
+### Smart Profanity Filter
+Context-aware content moderation system:
+- **Allows mild words** in normal contexts (bad, terrible, damn, hell)
+- **Blocks severe profanity**, hate speech, and harassment
+- Applied to chat messages and ride reviews
+- Custom implementation (no external dependencies)
+- Word boundary detection prevents false positives
+
 ### Score System
 ```javascript
-score = (ridesJoined×5 + ridesCreated×8 + 
-         passengersCarried×3 + fuelSaved×10 + 
+score = (ridesJoined×5 + ridesCreated×8 +
+         passengersCarried×3 + fuelSaved×10 +
          co2Saved×3) / 6
 ```
 
