@@ -1,11 +1,11 @@
 import React, { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { motion } from 'framer-motion';
-import { doc, updateDoc } from 'firebase/firestore';
+import { doc, updateDoc, collection, query, where, getDocs } from 'firebase/firestore';
 import { updatePassword } from 'firebase/auth';
 import { db, auth, storage } from '../firebase';
 import { useAuth } from '../context/AuthContext';
-import { User, Mail, Calendar, GraduationCap, Star, ArrowLeft, Save, Camera, Loader, Palette, Sun, Moon } from 'lucide-react';
+import { User, Mail, Calendar, GraduationCap, Star, ArrowLeft, Save, Camera, Loader, Palette, Sun, Moon, RefreshCw } from 'lucide-react';
 import { pageTransition, scaleIn } from '../animations/motionVariants';
 import { useToast } from '../context/ToastContext';
 import { ref, uploadBytes, getDownloadURL } from 'firebase/storage';
@@ -120,6 +120,56 @@ export const ProfilePage: React.FC = () => {
         await savePreferencesToDatabase(userData.uid);
         toast.success(`${newMode === 'dark' ? 'Dark' : 'Light'} mode enabled!`);
       }, 100);
+    }
+  };
+
+  const handleRoleSwitch = async () => {
+    if (!userData || !currentUser || loading) return;
+
+    setLoading(true);
+    try {
+      // Check for active rides
+      const ridesQuery = query(
+        collection(db, 'rides'),
+        where('status', '==', 'active')
+      );
+      const activeRidesSnapshot = await getDocs(ridesQuery);
+
+      // Check if user is involved in any active ride
+      const hasActiveRides = activeRidesSnapshot.docs.some((rideDoc) => {
+        const ride = rideDoc.data();
+        // Check if user is the driver
+        if (ride.driverID === userData.uid) return true;
+        // Check if user is a passenger
+        if (ride.passengers?.some((p: any) => p.uid === userData.uid)) return true;
+        return false;
+      });
+
+      if (hasActiveRides) {
+        toast.error('Please complete or cancel your active rides before switching roles');
+        setLoading(false);
+        return;
+      }
+
+      // Switch role
+      const newRole = userData.role === 'driver' ? 'rider' : 'driver';
+
+      await updateDoc(doc(db, 'users', userData.uid), {
+        role: newRole
+      });
+
+      await refreshUserData();
+      toast.success(`Successfully switched to ${newRole} mode!`);
+
+      // Redirect to home page to refresh the UI
+      setTimeout(() => {
+        navigate('/');
+      }, 1000);
+    } catch (error) {
+      console.error('Error switching role:', error);
+      toast.error('Failed to switch role. Please try again.');
+    } finally {
+      setLoading(false);
     }
   };
 
@@ -335,6 +385,22 @@ export const ProfilePage: React.FC = () => {
               >
                 Edit Profile
               </motion.button>
+
+              {/* Role Switch Button */}
+              <motion.button
+                onClick={handleRoleSwitch}
+                disabled={loading}
+                className="w-full py-3 bg-gradient-to-r from-purple-500 to-pink-500 text-white font-semibold rounded-lg shadow-lg hover:shadow-purple-500/50 transition disabled:opacity-50 disabled:cursor-not-allowed"
+                whileHover={{ scale: loading ? 1 : 1.02 }}
+                whileTap={{ scale: loading ? 1 : 0.98 }}
+              >
+                <RefreshCw className={`w-5 h-5 inline mr-2 ${loading ? 'animate-spin' : ''}`} />
+                {loading ? 'Switching...' : `Switch to ${userData.role === 'driver' ? 'Rider' : 'Driver'} Mode`}
+              </motion.button>
+
+              <p className="text-xs text-cyan-300/50 text-center mt-2">
+                Note: You can only switch roles when you have no active rides
+              </p>
             </div>
           ) : (
             <form onSubmit={handleSubmit} className="space-y-4">
