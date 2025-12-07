@@ -319,7 +319,9 @@ export async function getWeeklyStats(userID: string): Promise<Partial<UserStats>
     ridesCreated: weeklyRidesCreated,
     passengersCarried: weeklyPassengersCarried,
     totalDistanceKm: weeklyDistanceKm,
-    ...savings
+    fuelSaved: savings.fuelSavedL,
+    co2Saved: savings.co2SavedKG,
+    moneySaved: savings.moneySaved
   };
 }
 
@@ -457,4 +459,60 @@ export async function initializeUserStats(userID: string): Promise<void> {
       lastUpdated: new Date().toISOString()
     }
   });
+}
+
+// Reset weekly scores for all users (should be called weekly)
+export async function resetWeeklyScores(): Promise<void> {
+  try {
+    console.log('Resetting weekly scores for all users...');
+
+    const usersSnapshot = await getDocs(collection(db, 'users'));
+
+    for (const userDoc of usersSnapshot.docs) {
+      const userData = userDoc.data();
+
+      if (userData.stats) {
+        // Recalculate weekly score based on current week's activity
+        const weeklyStats = await getWeeklyStats(userData.uid);
+        const newWeeklyScore = calculateScore(weeklyStats);
+
+        await updateDoc(doc(db, 'users', userData.uid), {
+          'stats.weeklyScore': newWeeklyScore,
+          'stats.lastWeeklyReset': new Date().toISOString()
+        });
+      }
+    }
+
+    console.log('✅ Weekly scores reset successfully');
+  } catch (error) {
+    console.error('Error resetting weekly scores:', error);
+    throw error;
+  }
+}
+
+// Check if weekly reset is needed and perform it
+export async function checkAndResetWeeklyScores(): Promise<void> {
+  try {
+    // Get the last reset timestamp from a config document (you might want to create this)
+    // For now, we'll check each user's lastWeeklyReset timestamp
+    const usersSnapshot = await getDocs(collection(db, 'users'));
+
+    if (usersSnapshot.empty) return;
+
+    // Check first user's last reset (simplified approach)
+    const firstUser = usersSnapshot.docs[0].data();
+    const lastReset = firstUser.stats?.lastWeeklyReset
+      ? new Date(firstUser.stats.lastWeeklyReset)
+      : new Date(0); // Epoch if never reset
+
+    const now = new Date();
+    const daysSinceReset = (now.getTime() - lastReset.getTime()) / (1000 * 60 * 60 * 24);
+
+    // Reset if it's been 7+ days since last reset
+    if (daysSinceReset >= 7) {
+      await resetWeeklyScores();
+    }
+  } catch (error) {
+    console.error('Error checking weekly reset:', error);
+  }
 }

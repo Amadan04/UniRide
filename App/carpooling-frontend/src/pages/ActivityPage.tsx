@@ -564,7 +564,6 @@ export const ActivityPage: React.FC = () => {
 
   const handleCancelBooking = async (rideId: string) => {
     if (!userData) return;
-    if (!confirm('Are you sure you want to cancel this booking? You must cancel at least 2 hours before the ride.')) return;
 
     try {
       // Find the ride to get details
@@ -579,10 +578,14 @@ export const ActivityPage: React.FC = () => {
       const now = new Date();
       const hoursUntilRide = (rideDateTime.getTime() - now.getTime()) / (1000 * 60 * 60);
 
-      if (hoursUntilRide < 2) {
+      // Only enforce 2-hour rule if ride is in the future
+      if (hoursUntilRide > 0 && hoursUntilRide < 2) {
         toast.error('Cancellations must be made at least 2 hours before ride time');
         return;
       }
+
+      // Confirm cancellation
+      if (!confirm('Are you sure you want to cancel this booking?')) return;
 
       // Find the booking for this user and ride
       const bookingsRef = collection(db, 'bookings');

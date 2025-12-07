@@ -12,7 +12,7 @@ import {
   TrendingUp,
   Crown
 } from 'lucide-react';
-import { UserStats, BADGES, getWeeklyStats } from '../services/scoreService';
+import { UserStats, BADGES, getWeeklyStats, checkAndResetWeeklyScores } from '../services/scoreService';
 import { pageTransition } from '../animations/motionVariants';
 
 interface LeaderboardUser {
@@ -38,6 +38,9 @@ export const LeaderboardPage: React.FC = () => {
   const loadLeaderboard = async () => {
     try {
       setLoading(true);
+
+      // Check and reset weekly scores if needed (runs once per week)
+      await checkAndResetWeeklyScores();
 
       // Get all users
       const usersSnapshot = await getDocs(collection(db, 'users'));
