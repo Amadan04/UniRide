@@ -328,7 +328,6 @@ export async function getWeeklyStats(userID: string): Promise<Partial<UserStats>
 // Update user stats after ride completion
 export async function updateUserStats(userID: string): Promise<void> {
   try {
-    console.log('Updating stats for user:', userID);
 
     // Get all rides created by user
     const ridesCreatedQuery = query(
@@ -433,8 +432,6 @@ export async function updateUserStats(userID: string): Promise<void> {
         lastUpdated: new Date().toISOString()
       }
     });
-
-    console.log('✅ User stats updated successfully');
   } catch (error) {
     console.error('Error updating user stats:', error);
     throw error;
